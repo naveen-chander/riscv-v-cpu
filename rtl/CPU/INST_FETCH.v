@@ -83,7 +83,7 @@ always @(posedge CLK or posedge RST) begin
     if(RST) begin
         vector_count <= 3'b00;
     end
-	else if(~Vector__Stall | (Vector_release_counter>=1))
+	else if(~Vector__Stall | (Vector_release_counter>=1)|Branch_Taken__EX_MEM|Branch_Taken__MEM_WB)
 		vector_count <= 0;				// WHen Vector Unit is Not busy., Dont use counter
     else if(~(IF_ID_Freeze)|(vector_count == vector_limit)) begin
 		vector_count <= vector_count + 1;

@@ -93,7 +93,8 @@ Format for Vector Load Instructions under LOAD-FP major opcode
 module vec_decoder(	
     input [31:0] 		Instruction     ,
 	input 				reset			,
-	input				Data_Cache__Stall,
+	input				Inst_Cache__Stall,	//Mapped to freeze_vector{delayed /no_delayed}
+	input				Data_Cache__Stall,	//Data_Cache__Stall
 	output reg 			S_VECn			,
 	output reg [4:0]	decode__vs1     ,	
 	output reg [4:0]	decode__vs2     ,
@@ -123,6 +124,7 @@ wire [4:0] rd;
 wire [4:0] uimm5;
 
 wire 	   vector_mask;
+wire       decoder_disable;
 //////////////Decode logic		////////////////////
 
 assign opcode 		= Instruction[6:0];
@@ -136,10 +138,11 @@ assign rs2 	  		= Instruction[24:20];
 assign vd  	  		= Instruction[11:7];
 assign rd  	  		= Instruction[11:7];
 assign uimm5  		= Instruction[19:15];
-
-
+//////////////////////////////////////
+assign decoder_disable =  Data_Cache__Stall;
+//////////////////////////////////////
 always @(*) begin
-	if (reset|Data_Cache__Stall) 	
+	if (reset|decoder_disable) 	
 		S_VECn				<= 1;	//Scalar Instruction by default
 	else
 		S_VECn <=  ( (opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE)  || ((opcode == `OP_VEC_ARITH) && funct3 !=3'b111) )? 1'b0 : 1'b1;

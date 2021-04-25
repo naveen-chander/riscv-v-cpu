@@ -76,15 +76,15 @@ wire  			DONE        ;  		// 1: if Convoy Execution is complete : 0: If Convoy E
 									// first convoy and the start of a subsequent convoy
 									
 //////////////////////////////////////
-reg [2:0] vec_inst_counter	;		// Counts the number of contiguous Vector Instructions (0-7)
-wire [6:0] opcode;
-reg vector_gate;
-reg v_busy;
-reg [7:0] vec_cycle_counter;
-//reg [1:0] release_counter;
-wire S_VECn_prev;
-wire ored_freeze;
-reg freeze_vector_ops_delayed;
+reg [2:0] 		vec_inst_counter	;		// Counts the number of contiguous Vector Instructions (0-7)
+wire [6:0] 		opcode;
+reg 			vector_gate;
+reg 			v_busy;
+reg [7:0] 		vec_cycle_counter;
+wire 			S_VECn_prev;
+wire 			ored_freeze;
+reg 			freeze_vector_ops_delayed;
+wire			vec_decoder_disable;
 ///////////////////////////////////////////////
 // Instruction Array Declaration
 reg [2:0]	id			[`nLANES-1:0];
@@ -158,20 +158,29 @@ reg  [1:0]	decode__mode_lsu;
 
 reg [2:0]  	dispatch_counter;
 reg [3:0]  	freeze_thd;
-reg 		x_int;					//Interrupting Scalar Instruction Detector
-//reg 		freeze_x;					//Interrupting Scalar Instruction Detector
+reg 		x_int;						//Interrupting Scalar Instruction Detector
+reg 		Branch_Taken__MEM_WB;		//Branch taken Delayed.. Required to anull
+										//the third vector instruction
 reg 		freeze_v;					//Interrupting Scalar Instruction Detector
+wire 		freeze_vector;				//Signal that freezes - 
+										// (a) Vector_instruction Counter
+										// (b) Vector_cycle Counter
+										// (c) Freeze
+										// (d) Writing INstructions into Instruction Buffer
+// --------------------------------------------------------------------------//
+//          		RTL Logic Begins	 								     //
+// --------------------------------------------------------------------------//
 assign opcode = Instruction__IF_ID[6:0];
-//assign Instruction = sv_vv ? Instruction__IF_ID : Instruction__ID_EX;
 assign freeze = freeze_v | freeze_x;
-//assign v_stall = ~v_busy;  //Stall Generation changed to prolong the falling edge by one clock
+assign vec_decoder_disable = (release_counter == 0) ? (freeze_vector ? 1'b1 : 1'b0) : 1'b0;  
 ///////////////////////////////////////////////
 ///// Instantiate Vector Decoder Module     ///
 ///////////////////////////////////////////////
 vec_decoder VECTOR_DECODER_PRES(
 	.Instruction     (Instruction__IF_ID	 ),
 	.reset			 (reset			         ),
-	.Data_Cache__Stall(freeze_vector_ops     ),
+	.Inst_Cache__Stall(0			         ),
+	.Data_Cache__Stall(freeze_vector	     ),
 	.S_VECn			 (S_VECn				 ),
 	.decode__vs1     (decode_pres__vs1       ),
 	.decode__vs2     (decode_pres__vs2       ),
@@ -191,10 +200,11 @@ vec_decoder VECTOR_DECODER_PRES(
 	);
 
 	vec_decoder VECTOR_DECODER_PREV(
-	.Instruction     (Instruction__ID_EX	),
-	.reset			 (reset			    ),
-	.Data_Cache__Stall(freeze_vector_ops_delayed ),
-	.S_VECn			 (S_VECn_prev		),
+	.Instruction     (Instruction__ID_EX     ),
+	.reset			 (reset			         ),
+	.Inst_Cache__Stall(0         ),
+	.Data_Cache__Stall(freeze_vector	     ),
+	.S_VECn			 (S_VECn_prev		     ),
 	.decode__vs1     (decode_prev__vs1       ),
 	.decode__vs2     (decode_prev__vs2       ),
 	.decode__vd      (decode_prev__vd        ),
@@ -243,10 +253,8 @@ v_wrapper  VEC_EXE_UNIT(
 	);
 ///////////////////////////////////////////////////////////////////////////
 // 	Vector Instruction Count Register [2:0]
-//  Increments with every vector instruction
+//  Increments with every incoming vector instruction
 //  provided there are no Stalls from Vector Execution Unit
-//  If a scalar instruction arrives, the Vector Execution Counter is RESET
-//  If there are >8 contiguous vector instruction, the counter rolls over
 
 always @(posedge reset or posedge clk) 
 begin
@@ -254,7 +262,7 @@ begin
 		vec_inst_counter <= 0;
 	else if (v_busy|I_start) 
 		vec_inst_counter <= 0;
-	else if (~(freeze_vector_ops|freeze))	
+	else if (~(freeze_vector|freeze))	
 		vec_inst_counter <= vec_inst_counter + 1;
 end
 
@@ -269,23 +277,7 @@ begin
 		release_counter <= release_counter + 1;
 	
 end
-///////////////////////////////////////////////////////////////////////////
-// Vector Convoy Initiate Logic
-// Conditions - 
-//  1. Instruction__IF_ID OPCODE must pertain to SCALAR instruction OPCODE
-//  1. Instruction__ID_EX OPCODE must pertain to VECTOR instruction OPCODE
-//  2. Branch_Taken__EX_MEM should NOT be asserted
-//  3. Vector 
 
-always @(posedge reset or posedge clk) 
-begin
-	if(reset)
-		vector_gate <= 1'b0;
-	else if(v_busy)
-		vector_gate <= 1'b0;
-	else if(S_VECn)
-		vector_gate <= 1'b1;
-end
 ///////////////////////////////////////////////////////////////////////////
 //	Vector Cycle Counter : Count the number of cycles since rise of vec_gate
 ///////////////////////////////////////////////////////////////////////////
@@ -295,7 +287,7 @@ begin
 		vec_cycle_counter <= 0;
 	else if(v_busy)
 		vec_cycle_counter <= 0;
-	else if(~freeze_vector_ops)
+	else if(~freeze_vector)
 		vec_cycle_counter <= vec_cycle_counter+1;
 end
 ///////////////////////////////////////////////////////////////////////////
@@ -305,7 +297,7 @@ always @(posedge reset or posedge clk)
 begin
 	if(reset) 
 		v_busy 	<= 1'b1;
-	else if(Branch_Taken__EX_MEM)
+	else if(Branch_Taken__EX_MEM | Branch_Taken__MEM_WB)
 		v_busy <= 1'b1;		//Come out  of Vector if there was a preceding scalar branch instruction
 	else if(release_counter ==`release_thd) 
 		v_busy <= 1'b1;
@@ -320,7 +312,7 @@ always @(posedge reset or posedge clk)
 begin
 	if(reset) 
 		v_stall 	<= 1'b0;
-	else if(Branch_Taken__EX_MEM)
+	else if(Branch_Taken__EX_MEM| Branch_Taken__MEM_WB)
 		v_stall <= 1'b0;		//Come out  of Vector if there was a preceding scalar branch instruction
 	else if(release_counter ==`release_thd) 
 		v_stall <= 1'b0;
@@ -357,7 +349,7 @@ always @(posedge reset or posedge clk) begin
 		freeze_x <= 1'b0;
 	else if(release_counter == `release_thd-2)
 			freeze_x <=1'b0;
-	else if((~v_busy) && (vec_cycle_counter < freeze_thd) && S_VECn && ~freeze_vector_ops)
+	else if((~v_busy) && (vec_cycle_counter < freeze_thd) && S_VECn && ~(freeze_vector_ops|freeze_vector))
 			freeze_x <= 1'b1;
 end	
 //////////////////////////////////////////////	
@@ -379,18 +371,32 @@ always @(posedge reset or posedge clk) begin
 		x_int <= 1'b0;
 	else if(v_busy)
 		x_int <= 1'b0;
-	else if((S_VECn) && (vec_cycle_counter <= `nLANES-1) && ~freeze_vector_ops)
+	else if((S_VECn) && (vec_cycle_counter <= `nLANES-1) && ~(freeze_vector_ops|freeze_vector))
 		x_int <= 1'b1;
 end
-////////////////////////////////////////////////	
-//  Delayed freeze_vector_ops for sv_sequence //
+////////////////////////////////////////////////
+// Vector STallers
+//////////////////////////////////////////////	
+//  Select the right vector freeze          //
+//////////////////////////////////////////////	
+assign freeze_vector = sv_vv ? freeze_vector_ops_delayed : freeze_vector_ops ;
+//////////////////////////////////////////////
+//  Delayed signals --
+//	1. freeze_vector_ops for sv_sequence 		//
+//	2. Branch_Taken__MEM_WB for sv_sequence 		//
 ////////////////////////////////////////////////
 always @(posedge reset or posedge clk) begin
-	if(reset)
+	if(reset) begin
 		freeze_vector_ops_delayed <= 1'b0;
-	else
+		Branch_Taken__MEM_WB	<= 1'b0;
+	end
+	else begin
 		freeze_vector_ops_delayed <= freeze_vector_ops ;
+		Branch_Taken__MEM_WB <= Branch_Taken__EX_MEM;
+	end
 end
+
+
 //////////////////////////////////////////////	
 //  Send Instructions from the Inst Record   //
 //////////////////////////////////////////////	
@@ -506,7 +512,7 @@ begin
 	end 
 	else 
 		if(sv_vv) begin	 //Scalar to vector 
-			if (~S_VECn_prev && (vec_cycle_counter <= `nLANES-1) &&(~x_int) && ~freeze_vector_ops_delayed)  // If the incoming instruction is a Vector Instruction 
+			if (~S_VECn_prev && (vec_cycle_counter <= `nLANES-1) &&(~x_int) && ~freeze_vector)  // If the incoming instruction is a Vector Instruction 
 				begin
 				id		[vec_inst_counter]		<=		vec_inst_counter	 ;	
 				start   [vec_inst_counter]		<=		1'b1				 ;	
@@ -528,7 +534,7 @@ begin
 				end	
 			end
 		else	 begin		// Back to Back Vector Convoys
-			if (~S_VECn && (vec_cycle_counter <= `nLANES-1) && (~x_int)  && ~freeze_vector_ops)  // If the incoming instruction is a Vector Instruction 
+			if (~S_VECn && (vec_cycle_counter <= `nLANES-1) && (~x_int)  && ~freeze_vector)  // If the incoming instruction is a Vector Instruction 
 				begin
 				id		[vec_inst_counter]		<=		vec_inst_counter	 ;	
 				start   [vec_inst_counter]		<=		1'b1				 ;	
