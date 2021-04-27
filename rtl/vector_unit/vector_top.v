@@ -46,7 +46,8 @@ module vector_top(
 	output   			freeze,
 	output reg [1:0]	release_counter,
     output reg [4:0]  	rs2_sel,
-    output reg [4:0]  	rs1_sel
+    output reg [4:0]  	rs1_sel,
+	output wire			ALU_monitor
     );
 ///////////////////////////////////////////////	
 // Define REGs and WIREs
@@ -68,6 +69,7 @@ reg 			I_dmr     	;		// Vector data memory read control signal for ith instructi
 reg 			I_dmw     	;		// Vector data memory write control signal for ith instruction
 reg 			I_reg_we  	;		// Vector Register Write control signal for ith instruction
 reg 			I_mem_reg 	;		// Vector Register Write Data Source Select <DMEM(1) or vector-ALU(0)>
+reg 			I_Xout  	;		// 1 : IF the Vector operation produces a scalar Output
 reg [1:0]		I_mode_lsu	;		// Load Store Unit Operation mode : 00=>Unit Stride; "01"=>Stided "11"=>Indexed
 wire 			ALU_mon     ;   	// ALU Mon : Dummy Output {Can be ignored safely}
 wire 			stall		;		// 
@@ -103,6 +105,7 @@ reg 		dmr     	[`nLANES-1:0];
 reg 		dmw     	[`nLANES-1:0];
 reg 		reg_we  	[`nLANES-1:0];
 reg 		mem_reg 	[`nLANES-1:0];
+reg 		Xout    	[`nLANES-1:0];
 reg [1:0]	mode_lsu	[`nLANES-1:0];
 integer i;
 wire S_VECn;
@@ -121,6 +124,7 @@ wire 		decode_prev__dmr     ;
 wire 		decode_prev__dmw     ;
 wire 		decode_prev__reg_we  ;
 wire 		decode_prev__mem_reg ;
+wire 		decode_prev__Xout    ;
 wire [1:0]	decode_prev__mode_lsu;
 
 wire [4:0]	decode_pres__vs1     ;	
@@ -137,6 +141,7 @@ wire 		decode_pres__dmr     ;
 wire 		decode_pres__dmw     ;
 wire 		decode_pres__reg_we  ;
 wire 		decode_pres__mem_reg ;
+wire 		decode_pres__Xout    ;
 wire [1:0]	decode_pres__mode_lsu;
 
 reg  [4:0]	decode__vs1     ;	
@@ -153,6 +158,7 @@ reg  		decode__dmr     ;
 reg  		decode__dmw     ;
 reg  		decode__reg_we  ;
 reg  		decode__mem_reg ;
+reg  		decode__Xout    ;
 reg  [1:0]	decode__mode_lsu;
 
 
@@ -173,6 +179,7 @@ wire 		freeze_vector;				//Signal that freezes -
 assign opcode = Instruction__IF_ID[6:0];
 assign freeze = freeze_v | freeze_x;
 assign vec_decoder_disable = (release_counter == 0) ? (freeze_vector ? 1'b1 : 1'b0) : 1'b0;  
+assign ALU_monitor = ALU_mon;
 ///////////////////////////////////////////////
 ///// Instantiate Vector Decoder Module     ///
 ///////////////////////////////////////////////
@@ -196,6 +203,7 @@ vec_decoder VECTOR_DECODER_PRES(
 	.decode__dmw     (decode_pres__dmw       ),
 	.decode__reg_we  (decode_pres__reg_we    ),
 	.decode__mem_reg (decode_pres__mem_reg   ),
+	.decode__Xout    (decode_pres__Xout      ),
 	.decode__mode_lsu(decode_pres__mode_lsu  )
 	);
 
@@ -219,6 +227,7 @@ vec_decoder VECTOR_DECODER_PRES(
 	.decode__dmw     (decode_prev__dmw       ),
 	.decode__reg_we  (decode_prev__reg_we    ),
 	.decode__mem_reg (decode_prev__mem_reg   ),
+	.decode__Xout    (decode_prev__Xout      ),
 	.decode__mode_lsu(decode_prev__mode_lsu  )
 	);
 	
@@ -249,6 +258,7 @@ v_wrapper  VEC_EXE_UNIT(
 	.I_dmw     		(I_dmw     	),
 	.I_reg_we  		(I_reg_we  	),
 	.I_mem_reg 		(I_mem_reg 	),
+	.I_Xout 		(I_Xout 	),
 	.I_mode_lsu		(I_mode_lsu	)
 	);
 ///////////////////////////////////////////////////////////////////////////
@@ -422,6 +432,7 @@ begin
 		I_reg_we  		 <= 0;
 		I_mem_reg 		 <= 0;
 		I_mode_lsu		 <= 0;
+		I_Xout			 <= 0;
 		dispatch_counter <= 0;
 		//rs1_sel			 <= 0;
 		//rs2_sel			 <= 0;
@@ -448,6 +459,7 @@ begin
 		I_dmw     		 <= dmw     [dispatch_counter];
 		I_reg_we  		 <= reg_we  [dispatch_counter];
 		I_mem_reg 		 <= mem_reg [dispatch_counter];
+		I_Xout			 <= Xout    [dispatch_counter];
 		I_mode_lsu		 <= mode_lsu[dispatch_counter];			
 		//	Also Increment the dispatch counter		
 		dispatch_counter <= dispatch_counter + 1;
@@ -472,6 +484,7 @@ begin
 		I_dmw     		 <= 0;
 		I_reg_we  		 <= 0;
 		I_mem_reg 		 <= 0;
+		I_Xout           <= 0;
 		I_mode_lsu		 <= 0;
 		dispatch_counter <= 0;
 		//rs1_sel			 <= 0;
@@ -508,6 +521,7 @@ begin
 	    dmw     [i]	<=	0;	
 	    reg_we  [i]	<=	0;	
 	    mem_reg [i]	<=	0;	
+		Xout	[i] <=  0;
 	    mode_lsu[i]	<=	0;	
 	end 
 	else 
@@ -530,6 +544,7 @@ begin
 				dmw     [vec_inst_counter]		<=		decode_prev__dmw     ; 	
 				reg_we  [vec_inst_counter]		<=		decode_prev__reg_we  ; 	
 				mem_reg [vec_inst_counter]		<=		decode_prev__mem_reg ; 	
+				Xout    [vec_inst_counter]		<=		decode_prev__Xout	 ;
 				mode_lsu[vec_inst_counter]		<=		decode_prev__mode_lsu; 			
 				end	
 			end
@@ -552,6 +567,7 @@ begin
 				dmw     [vec_inst_counter]		<=		decode_pres__dmw     ; 	
 				reg_we  [vec_inst_counter]		<=		decode_pres__reg_we  ; 	
 				mem_reg [vec_inst_counter]		<=		decode_pres__mem_reg ; 	
+				Xout    [vec_inst_counter]		<=		decode_pres__Xout    ; 	
 				mode_lsu[vec_inst_counter]		<=		decode_pres__mode_lsu; 			
 				end	
 		end

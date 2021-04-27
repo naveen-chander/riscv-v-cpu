@@ -1,21 +1,21 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: DESE, IISc
+// Engineer: V Naveen Chander
 // 
 // Create Date: 02.04.2021 11:28:03
 // Design Name: 
 // Module Name: v_wrapper
-// Project Name: 
+// Project Name: riscv_v_cpu 
 // Target Devices: 
 // Tool Versions: 
-// Description: 
+// Description: Verilog Wrapper for Vector Execution unit
 // 
 // Dependencies: 
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: Added I_Xout for Vector Reduction Operations (26th April 2021)
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -44,6 +44,7 @@ input 			I_dmr     		,
 input 			I_dmw     		,
 input 			I_reg_we  		,
 input 			I_mem_reg 		,
+input 			I_Xout  		,
 input [1:0]		I_mode_lsu		
     );
 
@@ -71,6 +72,7 @@ wrapper wrapper_vhd(
 	.I_dmw     		(I_dmw     	),
 	.I_reg_we  		(I_reg_we  	),
 	.I_mem_reg 		(I_mem_reg 	),
+	.I_Xout 		(I_Xout  	),
 	.I_mode_lsu		(I_mode_lsu	)
 	);
 endmodule

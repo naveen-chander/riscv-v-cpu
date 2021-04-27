@@ -3,7 +3,7 @@
 
 module cpu(clk,clk_x2,rst,led,
            wb_ack_i,wb_err_i, wb_rty_i, wb_dat_i,wb_cyc_o, wb_adr_o, wb_stb_o, 
-           wb_we_o, wb_sel_o, wb_dat_o,wb_cti_o, wb_bte_o
+           wb_we_o, wb_sel_o, wb_dat_o,wb_cti_o, wb_bte_o,ALU_monitor
 
 `ifdef TEST
 ,block_instr_int
@@ -34,7 +34,7 @@ output [7:0] wb_sel_o;
 output [63:0] wb_dat_o;
 output [5:0] wb_cti_o;
 output [3:0] wb_bte_o;
-
+output ALU_monitor;
 //output [31:0] out_t0;
 //output [31:0] out_t1;
 //output [31:0] out_t2;
@@ -100,6 +100,7 @@ fet_dec_ex_mem fdem( .rst(rst),.clk(clk),.clk_x2(clk_x2),.led(led),.tick_en(tick
                      ,.wb_ack_i(wb_ack_i),.wb_err_i(wb_err_i),.wb_rty_i(wb_rty_i),.wb_dat_i(wb_dat_i)
                      ,.wb_cyc_o(wb_cyc_o),.wb_adr_o(wb_adr_o),.wb_stb_o(wb_stb_o),.wb_we_o(wb_we_o)
                      ,.wb_sel_o(wb_sel_o),.wb_dat_o(wb_dat_o),.wb_cti_o(wb_cti_o),.wb_bte_o(wb_bte_o)
+                     ,. ALU_monitor(ALU_monitor)   // Brought out just to avoid vector unit optimization
                     `ifdef itlb_def
                     ,.vpn_to_ppn_req(vpn_to_ppn_req)
                     `endif  

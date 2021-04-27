@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "defines.v"
 
-module FPGA_WRAPPER(rst_in,clk_in1_n,clk_in1_p,led,int_in
+module FPGA_WRAPPER(rst_in,clk_in1_n,clk_in1_p,led,int_in, ALU_monitor,
 `ifdef UART_IMPL_PER
 ,srx_pad_i,stx_pad_o
 //,rts_pad_o,cts_pad_i,dtr_pad_o,dsr_pad_i,ri_pad_i,dcd_pad_i
@@ -78,7 +78,7 @@ output [31:0] blck_instr_int;
 
 input [2:0] int_in;
 output [7:0] led;
-
+output ALU_monitor;
 `ifdef Demo_En
  input vn_in;
  input vp_in;

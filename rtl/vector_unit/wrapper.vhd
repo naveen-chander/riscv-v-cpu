@@ -51,6 +51,7 @@ port(
 	I_dmw     		: in std_logic;
 	I_reg_we  		: in std_logic;
 	I_mem_reg 		: in std_logic;
+	I_Xout	 		: in std_logic;
 	I_mode_lsu		: in std_logic_vector(1 downto 0);	
 	-----------------------------------------------------
     DONE             : out std_logic
@@ -100,6 +101,7 @@ VECTOR_EXE_UNIT_PIPE: exe_unit port map(
     Instruction.dmw     	=> I_dmw     		,	
     Instruction.reg_we  	=> I_reg_we  		,	
     Instruction.mem_reg 	=> I_mem_reg 		,	
+    Instruction.Xout	 	=> I_Xout	 		,	
     Instruction.mode_lsu	=> I_mode_lsu		,	
 	-------------------------------------------------
     DONE                        => DONE

@@ -34,17 +34,35 @@
 `define funct6__vnmsub	 		6'b101011
 `define funct6__vmacc	 		6'b101101
 `define funct6__vnmsac	 		6'b101111
+`define funct6__vredsum	 		6'b000000	// Same as vadd!
+`define funct6__vdot	 		6'b111001	// Dot Product
 
 
 `define funct3__OPIVV	 		3'b000		// Integer Vector-Vector
+`define funct3__OPMVV	 		3'b010		// Integer Mask -Vector ?
 `define funct3__OPIVI	 		3'b011		// Integer Vector-Immediate {simm5}
-//`define funct3__OPIVX	 		3'b100		// Integer Vector-Scalar {rs1}
-`define funct3__OPIVX	 		3'b110		// Integer Vector-Scalar {rs1}	// Due to compiler error
+`define funct3__OPIVX	 		3'b100		// Integer Vector-Scalar {rs1}
+`define funct3__OPMVX	 		3'b110		// Integer Vector-Scalar {rs1}
+`define funct3__VCSR	 		3'b111		// To R/W Vector CSRs
 
-
-
-
-
+// 26.04.2021: The source code for Spike (and riscv-v toolchain) appears to have a mismatch 
+// with RVV_1.0 Spec document for decoding arithmetic  instructions.
+// The funct_3 values for vector arithmetic operations of the form :
+// vop_vv assumes OP_MVV and OP_MVX instead of OP_IVV and OP_IVX 
+// Decoding table  used as reference is shown below {Sticking to toolchain opcodes}:-
+//		+----------------+--------------+-----------+
+//		|Instruction	 |	funct6	    |	funct3	|
+//		+----------------+--------------+-----------+
+//		|vadd_vv   	 	 |	00_0000     |	000		|
+//		|vadd_vx		 |	00_0000     |	100		|
+//		|vmul_vv		 |	10_0101     |	010		|
+//		|vmul_vx		 |	10_0101     |	110		|
+//		|vmacc_vv		 |	10_1101     |	010		|
+//		|vmacc_vx		 |	10_1101     |	110		|
+//		|vdot_vv		 |	11_1001     |	010		|
+//		|vdot_vx		 |	11_1001     |	110		|
+//		|vredsum_vx	 	 |	00_0000     |	010		|
+//		+----------------+--------------+-----------+
 
 
 // Vector Load Store Format
@@ -62,7 +80,7 @@ Format for Vector Load Instructions under LOAD-FP major opcode
 */ 
 
 
-// Vector Store Store Format
+// Vector Store Store Format {As per RVV_1.0}
 //--------------------------------------------------------------------------------------------
 /*Format for Vector Store Instructions under STORE-FP major opcode
 ////
@@ -72,9 +90,7 @@ Format for Vector Load Instructions under LOAD-FP major opcode
  nf  | mew| mop | vm |   vs2    |    rs1    | width |   vs3   |0100111| VSX* indexed
   3     1    2     1      5           5         3         5        7
 */
-
-  
-// Vector aRITHMETIC INSTRUCTION fORMAT
+// Vector ARITHMETIC INSTRUCTION fORMAT
 //--------------------------------------------------------------------------------------------
 
 /*
@@ -110,6 +126,7 @@ module vec_decoder(
 	output reg 			decode__dmw     ,
 	output reg 			decode__reg_we  ,
 	output reg 			decode__mem_reg ,
+	output reg 			decode__Xout    ,
 	output reg [1:0]	decode__mode_lsu
     );
 wire [7:0] opcode;
@@ -125,6 +142,7 @@ wire [4:0] uimm5;
 
 wire 	   vector_mask;
 wire       decoder_disable;
+wire 	   vector_reduction;
 //////////////Decode logic		////////////////////
 
 assign opcode 		= Instruction[6:0];
@@ -145,7 +163,7 @@ always @(*) begin
 	if (reset|decoder_disable) 	
 		S_VECn				<= 1;	//Scalar Instruction by default
 	else
-		S_VECn <=  ( (opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE)  || ((opcode == `OP_VEC_ARITH) && funct3 !=3'b111) )? 1'b0 : 1'b1;
+		S_VECn <=  ( (opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE)  || ((opcode == `OP_VEC_ARITH) && funct3 !=`funct3__VCSR) )? 1'b0 : 1'b1;
 end
 always @(*) begin
 	if (reset|S_VECn) begin	
@@ -163,15 +181,23 @@ always @(*) begin
 		decode__dmw         <= 0;
 		decode__reg_we      <= 0;
 		decode__mem_reg     <= 0;
+		decode__Xout        <= 0;
 		decode__mode_lsu    <= 0;
+
 	end
 	else begin
+
 		decode__vs1 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : 
-					   ((opcode==`OP_VEC_ARITH)  && ((funct3 == `funct3__OPIVX) || (funct3 == `funct3__OPIVX))) ? 0: vs1;
-		decode__vs2 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : vs2;
+					   (	(opcode==`OP_VEC_ARITH)  && 
+					   		((funct3 == `funct3__OPIVX) || (funct3 == `funct3__OPMVX) || (funct3 == `funct3__OPIVI)) 
+					   ) ? 0 : vs1;
+		decode__vs2 <= ((opcode == `OP_VEC_LOAD)  | 
+						(opcode == `OP_VEC_STORE) | 
+						(funct6 == `funct6__vredsum && funct3 == `funct3__OPMVV)	// vredsum instruction
+					   ) ? 0 : vs2;
 		decode__vd  <= vd;
 		decode__RS1 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? rs1 : 
-					((opcode==`OP_VEC_ARITH)  && (funct3 == `funct3__OPIVX))? rs1: 0;
+						((opcode==`OP_VEC_ARITH) && (funct3 == `funct3__OPIVX) | (funct3 == `funct3__OPMVX) )? rs1: 0;
 		decode__RS2 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : rs2;
 		decode__uimm5  <= ((opcode == `OP_VEC_ARITH) &&(funct3 == `funct3__OPIVI)) ? uimm5 : 0;	
 		
@@ -189,26 +215,38 @@ always @(*) begin
 			`funct6__vnmsub	 	    : decode__funct <= 4'b0000; //Yet to be implemented
 			`funct6__vmacc	 	    : decode__funct <= 4'b0011;
 			`funct6__vnmsac	 	    : decode__funct <= 4'b0100;
+			`funct6__vdot			: decode__funct <= 4'b0011;	// Same as MACC
 			default 				: decode__funct <= 4'b0000;  //vadd
 		endcase
 		decode__permute <= ( (opcode == `OP_VEC_ARITH) && (funct6 ==`funct6__vslidedown) ) ? 2'b01 : 0;	//Fix to slide1down
 		decode__mask_en <= vector_mask;
 		//-------------decode__ALUSrc-----------------------
-		if (opcode == `OP_VEC_ARITH)
-		  if (funct3 == `funct3__OPIVX)
+		if (opcode == `OP_VEC_ARITH) begin
+		  if (funct3 == `funct3__OPIVX | funct3 == `funct3__OPMVX)
 		      decode__ALUSrc <= 2'b01;
 		  else if (funct3 == `funct3__OPIVI)
 		      decode__ALUSrc <= 2'b11;
 		  else
 		      decode__ALUSrc <= 2'b00;
+		  end
 		else
 		  decode__ALUSrc <= 2'b00;
         //-----------------------------------------------------
 		decode__dmr		<= (opcode == `OP_VEC_LOAD)   ? 1'b1 :1'b0;
 		decode__dmw		<= (opcode == `OP_VEC_STORE)  ? 1'b1 :1'b0;
-		decode__reg_we	<= ((opcode == `OP_VEC_LOAD)  || (opcode == `OP_VEC_ARITH))  ? 1'b1 :1'b0;
+		decode__reg_we	<= ((opcode == `OP_VEC_LOAD)  || (opcode == `OP_VEC_ARITH))  ? (~decode__Xout ? 1'b1 :1'b0) : 1'b0;
 		decode__mem_reg	<= ((opcode == `OP_VEC_LOAD))  ? 1'b1 :1'b0;
 		decode__mode_lsu<= ((opcode == `OP_VEC_LOAD))  ? Instruction[27:26] :1'b0;
+		//--- Vector Instructions with Scalar outputs
+		if (opcode == `OP_VEC_ARITH) begin
+			if ( ((funct6 == `funct6__vdot) && ((funct3 == `funct3__OPIVV)||(funct3 == `funct3__OPMVX))) |
+				 (funct6 == `funct6__vredsum &&   (funct3 == `funct3__OPMVV) )
+				)		//Only for vredsum and vdot as of now
+				decode__Xout <= 1;
+			end
+			else
+				decode__Xout <= 0;
+		///------------------------------------------------------
 	end 
 end
 endmodule

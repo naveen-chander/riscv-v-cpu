@@ -31,22 +31,23 @@ use IEEE.NUMERIC_STD.ALL;
 package mypack is
 
 type i_rec is record
-	start   : std_logic;
-	vs1     : std_logic_vector(4 downto 0);
-	vs2     : std_logic_vector(4 downto 0);
-	vd      : std_logic_vector(4 downto 0);
-	RS1     : std_logic_vector(31 downto 0);
-	RS2     : std_logic_vector(31 downto 0);
-	uimm5   : std_logic_vector(4 downto 0);
-	funct   : std_logic_vector(3 downto 0);
-	permute : std_logic_vector(1 downto 0);
-	mask_en : std_logic;
-	ALUSrc  : std_logic_vector(1 downto 0);
-	dmr     : std_logic;
-	dmw     : std_logic;
-	reg_we  : std_logic;
-	mem_reg : std_logic;
-	mode_lsu: std_logic_vector(1 downto 0);
+	start   : std_logic;                          -- Begin Vector Operations
+	vs1     : std_logic_vector(4 downto 0);       -- Vector Source Register 1
+	vs2     : std_logic_vector(4 downto 0);       -- Vector Source Register 2
+	vd      : std_logic_vector(4 downto 0);       -- Vector Destination Register|Scalar Destination if result is Scalar  
+	RS1     : std_logic_vector(31 downto 0);      -- Scalar Register Contents read from XRF-rs1
+	RS2     : std_logic_vector(31 downto 0);      -- Scalar Register Contents read from XRF-rs2
+	uimm5   : std_logic_vector(4 downto 0);       -- 5-bit immediate {Implemented as Unsigned ONLY}
+	funct   : std_logic_vector(3 downto 0);       -- Vector Operation Selector
+	permute : std_logic_vector(1 downto 0);       -- MAgnitude of Vector Slidedown
+	mask_en : std_logic;                          -- Vector Mask Enable
+	ALUSrc  : std_logic_vector(1 downto 0);       -- ALU-OP1 Source == VecREG : 00 | XREG : 01 | Immediate : 11 
+	dmr     : std_logic;                          -- Vector Memory Read
+	dmw     : std_logic;                          -- Vector memory Write
+	reg_we  : std_logic;                          -- Vector Register Write {If esult is scalar, then scalar register write }
+	mem_reg : std_logic;                          -- 0=>DMEM_Read Data into Reg | 1=> ALU OUtput into VREG File
+  Xout    : std_logic;                          -- 1=> Write to Internal X-reg 
+	mode_lsu: std_logic_vector(1 downto 0);       -- 00=> Unit Stride 10=> Strided  11=> Indexed
 end record i_rec;
 
 type alu_output is record    	 
@@ -82,6 +83,7 @@ constant i_rec_init : i_rec :=
 	dmw     => '0',
 	reg_we  => '0',
 	mem_reg => '0',
+  Xout    => '0',
 	mode_lsu=> (others=>'0')
  );
  
@@ -117,6 +119,17 @@ generic(width : integer :=32);
            overflow : out std_logic;
            underflow : out std_logic
            );
+end component;
+-----------------------------------------------------------------
+
+component xoutreg is
+  Port  ( 
+      clk 		    : in  STD_LOGIC;
+      reset 		  : in  STD_LOGIC;	-- Asynchronous RESET
+      WDATA       : in  alu_y_signed;
+      RDATA       : out op_array;
+      WE          : in  done_array
+  );
 end component;
 -----------------------------------------------------------------
 component multicycle_ops is

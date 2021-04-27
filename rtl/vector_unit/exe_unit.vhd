@@ -53,15 +53,16 @@ type chain_select is array(0 to 7) of std_logic_vector(2 downto 0);
 type reg_select is array(0 to 7) of std_logic_vector(4 downto 0);
 
 signal ALU_y            :   ALU_y_signed;
-signal vs1		:   reg_select;
-signal vs2		:   reg_select;
-signal vs3		:   reg_select;
-signal vs4		:   reg_select;
-signal vd		:   reg_select;
-signal REG_WE           :   done_array;
+signal vs1				:   reg_select;
+signal vs2				:   reg_select;
+signal vs3				:   reg_select;
+signal vs4				:   reg_select;
+signal vd				:   reg_select;
+signal VREG_WE          :   done_array;
+signal Xoutreg_WE       :   done_array;
 signal DONEs_internal   :   done_array;
 signal multi_cyc_done_level   : done_array;
-signal DIV_BUSY		     :   done_array;
+signal DIV_BUSY		    :   done_array;
 signal RD_EXE_DONEs     :   done_array;
 signal EXE_MEM_DONEs    :   done_array;
 signal MEM_WB_DONEs     :   done_array;
@@ -93,6 +94,7 @@ signal DATA_RD4         :   op_array;
 signal v0_DATA          :   op_array;
 signal LSU_y            :   op_array;
 signal quotient         :   op_array;
+
 signal ALU_cout         :   done_array;
 signal ALU_overflow     :   done_array;
 signal ALU_underflow    :   done_array;
@@ -130,6 +132,7 @@ signal DMEM_DATA        : op_array;
 signal DMEM_DATA_Xbar   : op_array;
 signal dmem_din         : op_array;
 signal dmem_din_Xbar    : op_array;
+signal Xoutreg_data     : op_array;
 
 signal MEM_WB_Instructions : array_i_rec;
 signal MEM_WB_ALU_y        : op_array;
@@ -308,7 +311,7 @@ GEN_VRFS:
 		vs3		 	=> vs3(i)				,			
 		vs4		 	=> vs4(i)				,			
 		DATA_WR	 	=> REG_DATA_WR(i) 		,		
-		WE		 	=> REG_WE(i)			,
+		WE		 	=> VREG_WE(i)			,
 		v0_DATA		=> v0_DATA(i)			,
 		DATA_RD1 	=> DATA_RD1(i)			,	
 		DATA_RD2 	=> DATA_RD2(i)			,
@@ -422,15 +425,15 @@ DMEM7: DMEM_7 port map(
 );
 
 ------------------------------------------------------
--- DMEM_INF: process(EXE_MEM_LSU_y)
--- begin
-	-- for i in 0 to 7 loop
-		-- DMEM_ADDR(i) <= EXE_MEM_LSU_y(i)(9 downto 0);
-	-- end loop;
--- end process DMEM_INF;
-------------------------------------------------------	
-
-
+-- Xout registers to store Vector Units's Scalar outputs
+X_REGS: Xoutreg port map
+(
+	    clk 		=>  clk		,
+        reset 		=>  reset	,
+        WDATA       =>  ALU_y   ,
+        RDATA       =>  Xoutreg_data,
+        WE          =>  Xoutreg_WE
+); 
 ------------------------------------------------------	
 
 DMEM_WE_GEN: process(MEM_WB_DONEs, DONEs_internal, EXE_MEM_Instructions)
@@ -495,7 +498,9 @@ begin
 end process MEM_WB_MUX;
 ---------------------------------------------------------
 --VREG_WRITE_DATA XBAR
-write_xbar: process(MEM_WB_counts,MEM_WB_DATA,MEM_WB_Instructions,MASK_VECTOR,DONEs_internal,WB_FIN_DONEs)
+-- Write Logic to Vector Destination Registers
+-- 
+vreg_write_xbar: process(MEM_WB_counts,MEM_WB_DATA,MEM_WB_Instructions,MASK_VECTOR,DONEs_internal,WB_FIN_DONEs)
 variable count_mem : integer range 0 to 7;
 begin
 	count_mem := to_integer(unsigned(MEM_WB_counts(0))) mod 8;
@@ -506,14 +511,35 @@ begin
 		vd(i)      	   <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).vd;
 		-- Register Bank Masked Write Enable Router
 		if MEM_WB_Instructions(i).MASK_EN = '1' then
-			REG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and MASK_VECTOR(to_integer(unsigned(MEM_WB_counts(i))));
-		else
-			--REG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and not (MEM_WB_DONEs(((8-i+count_mem) mod 8)));
-			REG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and ((not (DONEs_internal(((8-i+count_mem) mod 8)))) or (not (WB_FIN_DONEs(((8-i+count_mem) mod 8)))));
-			--REG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE;
+			-------------------------------------------------------------------------------------------------
+				VREG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and
+							  MASK_VECTOR(to_integer(unsigned(MEM_WB_counts(i)))) and 
+							  ((not (DONEs_internal(((8-i+count_mem) mod 8)))) or (not (WB_FIN_DONEs(((8-i+count_mem) mod 8)))));
+			-------------------------------------------------------------------------------------------------
+		else								-- IF Vector Mask is Disabled
+				VREG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and ((not (DONEs_internal(((8-i+count_mem) mod 8)))) or (not (WB_FIN_DONEs(((8-i+count_mem) mod 8)))));	
+			-------------------------------------------------------------------------------------------------
 		end if;
 	end loop;
-end process write_xbar;
+end process vreg_write_xbar;
+
+---------------------------------------------------------
+Xoutreg_WE_gen: process(RD_EXE_Instructions,MASK_VECTOR, DONEs_internal, EXE_MEM_DONEs,RD_EXE_Counts)
+begin 
+	for i in 0 to 7 loop
+		if RD_EXE_Instructions(i).MASK_EN = '1' then
+			--------------------------------------------------------------------------------------
+				Xoutreg_WE(i)	<= 	RD_EXE_Instructions(i).Xout 						and 
+									MASK_VECTOR(to_integer(unsigned(MEM_WB_counts(i)))) 	and 
+									(	(not (DONEs_internal(((i))))) or (not (EXE_MEM_DONEs(i))));
+		else		-- IF Vector Mask is NOT enabled
+			--------------------------------------------------------------------------------------
+				Xoutreg_WE(i)	<= 	RD_EXE_Instructions(i).Xout 						and 
+									(	(not (DONEs_internal(((i))))) or (not (EXE_MEM_DONEs(i))));				
+		end if;
+	end loop;
+end process	Xoutreg_WE_gen;
+
 ---------------------------------------------------------
 --PIPELINE
 -- Stages
@@ -542,7 +568,7 @@ begin
 				RD_EXE_DATA_RD1(i) <= op1_XbarOut(i);
 				RD_EXE_DATA_RD2(i) <= op2_XbarOut(i);
 				RD_EXE_DATA_RD3(i) <= op3_XbarOut(i);
-                RD_EXE_DATA_RD4(i) <= op4_XbarOut(i); --Forwarding Not Planned
+				RD_EXE_DATA_RD4(i) <= op4_XbarOut(i); --Forwarding Not Planned
 				RD_EXE_v0_DATA(i)  <= v0_DATA(i);
 				RD_EXE_counts(i)   <= counts(i);
 				RD_EXE_DONEs(i)    <= DONEs_internal(i);
@@ -651,7 +677,7 @@ end process Fin_Stage;
 		-- MEM Stage Chaining
 			--> WB_FIN(i-2)	-- IN case of  (a) MAC(i-2) --> Something(i-1) --> MAC(i) when the vd's match
 							--             (b) Something(i-2) --> Something(i-1) --> Store(i) when their vs2's match  
-		--> During Stalls, no Chaining would be required from (i-2)th instruction (Check!)
+		--> During Stalls, no Chaining would be required from (i-2)th instruction 
 		---*-_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
 -- (3) From (i-3)th instruction
 		-->	EX Stage Chaining
@@ -668,7 +694,7 @@ end process Fin_Stage;
 --		|-- 011    |  MEM_WB(i-2)         |
 --		|-- 100    |  WB_FIN(i-3)         |
 --		|---------------------------------+
---
+--	NOTE: Forwarding shall not be done if a previous instruction has scalar outputs. {Xout=1]
 ------------------------------------------------------------------------------------------
 -- /()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()
 --             EX STAGE FORWARDING
@@ -685,7 +711,8 @@ begin
 			-----------------------------All other instructions-----------------------------------
 			else
 				if	((MEM_WB_Instructions(i-1).REG_WE = '1') and 
-					 (MEM_WB_Instructions(i-1).vd /="00000") and 
+					 (MEM_WB_Instructions(i-1).vd /="00000") and
+					 (MEM_WB_Instructions(i-1).Xout = '0'  ) and  	
 					 (MEM_WB_Instructions(i-1).vd = RD_EXE_Instructions(i).vs1)
 					) then
 						E_FA(i) <= "010";	-- MEM_WB(i-1)	
@@ -708,6 +735,8 @@ begin
 			elsif i = 1 then
 				if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 					if( (EXE_MEM_Instructions(0).REG_WE = '1') and 
+						(EXE_MEM_Instructions(0).vd /="00000") and
+						(EXE_MEM_Instructions(0).Xout = '0'  ) and  
 						(EXE_MEM_Instructions(0).vd = RD_EXE_Instructions(1).vs1)
 					  ) then
 							E_FA(1) <= "001";	-- EX_MEM(i-1)
@@ -722,11 +751,15 @@ begin
 			 elsif i = 2 then
 			     if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 					if( (EXE_MEM_Instructions(1).REG_WE = '1') and 
+						(EXE_MEM_Instructions(1).vd /="00000") and
+						(EXE_MEM_Instructions(1).Xout = '0'  ) and  
 					    (EXE_MEM_Instructions(1).vd = RD_EXE_Instructions(2).vs1)
 				       ) then
 					       E_FA(i) <= "001";	-- EX_MEM(i-1)
 					
 				    elsif(  (MEM_WB_Instructions(0).REG_WE = '1') and 
+							(MEM_WB_Instructions(0).vd /="00000") and
+							(MEM_WB_Instructions(0).Xout = '0'  ) and  
 						    (MEM_WB_Instructions(0).vd = RD_EXE_Instructions(2).vs1)
 				          ) then
 					       E_FA(i) <= "011";	-- MEM_WB(i-2) Stage Data		
@@ -741,14 +774,20 @@ begin
 			 else
 			     if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 				        if( (EXE_MEM_Instructions(i-1).REG_WE = '1') and 
+							(EXE_MEM_Instructions(i-1).vd /="00000") and
+							(EXE_MEM_Instructions(i-1).Xout = '0'  ) and  
 					        (EXE_MEM_Instructions(i-1).vd = RD_EXE_Instructions(i).vs1)
 				           ) then
 					           E_FA(i) <= "001";	-- EX_MEM(i-1)			 
 					     elsif(	(MEM_WB_Instructions(i-2).REG_WE = '1') and 
+						 		(MEM_WB_Instructions(i-2).vd /="00000") and
+						 		(MEM_WB_Instructions(i-2).Xout = '0'  ) and  
 							    (MEM_WB_Instructions(i-2).vd = RD_EXE_Instructions(i).vs1)
 						      ) then
 							     E_FA(i) <= "011";	-- MEM_WB(i-2)	
 					     elsif(  (WB_FIN_Instructions(i-3).REG_WE = '1') and 
+						 		 (WB_FIN_Instructions(i-3).vd /="00000") and
+						 		 (WB_FIN_Instructions(i-3).Xout = '0'  ) and  
 							     (WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs1)
 						          ) then
 							     E_FA(i) <= "100";	-- WB_FIN Stage Data					  					
@@ -775,6 +814,8 @@ begin
 			-----------------------------2nd Instruction Forwarding-----------------------------------
 			elsif i = 1 then
 				if( (EXE_MEM_Instructions(0).REG_WE = '1') and    -- Previ Instruction writes to Reg
+					(EXE_MEM_Instructions(0).vd /="00000") and
+					(EXE_MEM_Instructions(0).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(0).vd = RD_EXE_Instructions(1).vs1)
 				) then
 					E_FA(1) <= "001";	-- EX_MEM(i-1)
@@ -786,31 +827,41 @@ begin
 			-----------------------------3rd Instruction Forwarding-----------------------------------
 			elsif i = 2 then
 				if( (EXE_MEM_Instructions(1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(1).vd /="00000") and
+					(EXE_MEM_Instructions(1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(1).vd = RD_EXE_Instructions(2).vs1)
 				) then
-					E_FA(i) <= "001";	-- EX_MEM(i-1)
+					E_FA(2) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(0).REG_WE = '1') and 
+						(MEM_WB_Instructions(0).vd /="00000") and
+						(MEM_WB_Instructions(0).Xout = '0'  ) and  
 						(MEM_WB_Instructions(0).vd = RD_EXE_Instructions(2).vs1)
 				) then
-					E_FA(i) <= "011";	-- MEM_WB(i-2) Stage Data		
+					E_FA(2) <= "011";	-- MEM_WB(i-2) Stage Data		
 				else
-					E_FA(i) <= "000";	-- Register  Data
+					E_FA(2) <= "000";	-- Register  Data
 				end if;	
 			------------------------------4,5,6,7 Instruction Forwarding-----------------------------------
 			else
 				if( (EXE_MEM_Instructions(i-1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(i-1).vd /="00000") and
+					(EXE_MEM_Instructions(i-1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(i-1).vd = RD_EXE_Instructions(i).vs1)
 				) then
 					E_FA(i) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(i-2).REG_WE = '1') and 
+						(MEM_WB_Instructions(i-2).vd /="00000") and
+						(MEM_WB_Instructions(i-2).Xout = '0'  ) and  
 						(MEM_WB_Instructions(i-2).vd = RD_EXE_Instructions(i).vs1)
 				) then
 					E_FA(i) <= "011";	-- MEM_WB(i-2) Stage Data	
 					
 				elsif( (WB_FIN_Instructions(i-3).REG_WE = '1') and 
-					(WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs1)
+					   (WB_FIN_Instructions(i-3).vd /="00000") and
+					   (WB_FIN_Instructions(i-3).Xout = '0'  ) and  
+					   (WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs1)
 				) then
 					E_FA(i) <= "100";	-- WB_FIN Stage Data	
 					
@@ -838,7 +889,8 @@ begin
 			-----------------------------All other instructions-----------------------------------
 			else
 				if	((MEM_WB_Instructions(i-1).REG_WE = '1') and 
-					 (MEM_WB_Instructions(i-1).vd /="00000") and 
+					 (MEM_WB_Instructions(i-1).vd /="00000") and
+					 (MEM_WB_Instructions(i-1).Xout = '0'  ) and  	
 					 (MEM_WB_Instructions(i-1).vd = RD_EXE_Instructions(i).vs2)
 					) then
 						E_FB(i) <= "010";	-- MEM_WB(i-1)	
@@ -861,6 +913,8 @@ begin
 			elsif i = 1 then
 				if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 					if( (EXE_MEM_Instructions(0).REG_WE = '1') and 
+						(EXE_MEM_Instructions(0).vd /="00000") and
+						(EXE_MEM_Instructions(0).Xout = '0'  ) and  
 						(EXE_MEM_Instructions(0).vd = RD_EXE_Instructions(1).vs2)
 					  ) then
 							E_FB(1) <= "001";	-- EX_MEM(i-1)
@@ -875,11 +929,15 @@ begin
 			 elsif i = 2 then
 			     if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 					if( (EXE_MEM_Instructions(1).REG_WE = '1') and 
+						(EXE_MEM_Instructions(1).vd /="00000") and
+						(EXE_MEM_Instructions(1).Xout = '0'  ) and  
 					    (EXE_MEM_Instructions(1).vd = RD_EXE_Instructions(2).vs2)
 				       ) then
 					       E_FB(i) <= "001";	-- EX_MEM(i-1)
 					
 				    elsif(  (MEM_WB_Instructions(0).REG_WE = '1') and 
+							(MEM_WB_Instructions(0).vd /="00000") and
+							(MEM_WB_Instructions(0).Xout = '0'  ) and  
 						    (MEM_WB_Instructions(0).vd = RD_EXE_Instructions(2).vs2)
 				          ) then
 					       E_FB(i) <= "011";	-- MEM_WB(i-2) Stage Data		
@@ -894,14 +952,20 @@ begin
 			 else
 			     if	RD_EXE_counts(i) = "000000" then	-- Only for 0th element
 				        if( (EXE_MEM_Instructions(i-1).REG_WE = '1') and 
+							(EXE_MEM_Instructions(i-1).vd /="00000") and
+							(EXE_MEM_Instructions(i-1).Xout = '0'  ) and  
 					        (EXE_MEM_Instructions(i-1).vd = RD_EXE_Instructions(i).vs2)
 				           ) then
 					           E_FB(i) <= "001";	-- EX_MEM(i-1)			 
 					     elsif(	(MEM_WB_Instructions(i-2).REG_WE = '1') and 
+						 		(MEM_WB_Instructions(i-2).vd /="00000") and
+						 		(MEM_WB_Instructions(i-2).Xout = '0'  ) and  
 							    (MEM_WB_Instructions(i-2).vd = RD_EXE_Instructions(i).vs2)
 						      ) then
 							     E_FB(i) <= "011";	-- MEM_WB(i-2)	
 					     elsif(  (WB_FIN_Instructions(i-3).REG_WE = '1') and 
+						 		 (WB_FIN_Instructions(i-3).vd /="00000") and
+						 		 (WB_FIN_Instructions(i-3).Xout = '0'  ) and  
 							     (WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs2)
 						          ) then
 							     E_FB(i) <= "100";	-- WB_FIN Stage Data					  					
@@ -928,6 +992,8 @@ begin
 			-----------------------------2nd Instruction Forwarding-----------------------------------
 			elsif i = 1 then
 				if( (EXE_MEM_Instructions(0).REG_WE = '1') and    -- Previ Instruction writes to Reg
+					(EXE_MEM_Instructions(0).vd /="00000") and
+					(EXE_MEM_Instructions(0).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(0).vd = RD_EXE_Instructions(1).vs2)
 				) then
 					E_FB(1) <= "001";	-- EX_MEM(i-1)
@@ -939,31 +1005,41 @@ begin
 			-----------------------------3rd Instruction Forwarding-----------------------------------
 			elsif i = 2 then
 				if( (EXE_MEM_Instructions(1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(1).vd /="00000") and
+					(EXE_MEM_Instructions(1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(1).vd = RD_EXE_Instructions(2).vs2)
 				) then
-					E_FB(i) <= "001";	-- EX_MEM(i-1)
+					E_FB(2) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(0).REG_WE = '1') and 
+						(MEM_WB_Instructions(0).vd /="00000") and
+						(MEM_WB_Instructions(0).Xout = '0'  ) and  
 						(MEM_WB_Instructions(0).vd = RD_EXE_Instructions(2).vs2)
 				) then
-					E_FB(i) <= "011";	-- MEM_WB(i-2) Stage Data		
+					E_FB(2) <= "011";	-- MEM_WB(i-2) Stage Data		
 				else
-					E_FB(i) <= "000";	-- Register  Data
+					E_FB(2) <= "000";	-- Register  Data
 				end if;	
 			------------------------------4,5,6,7 Instruction Forwarding-----------------------------------
 			else
 				if( (EXE_MEM_Instructions(i-1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(i-1).vd /="00000") and
+					(EXE_MEM_Instructions(i-1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(i-1).vd = RD_EXE_Instructions(i).vs2)
 				) then
 					E_FB(i) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(i-2).REG_WE = '1') and 
+						(MEM_WB_Instructions(i-2).vd /="00000") and
+						(MEM_WB_Instructions(i-2).Xout = '0'  ) and  
 						(MEM_WB_Instructions(i-2).vd = RD_EXE_Instructions(i).vs2)
 				) then
 					E_FB(i) <= "011";	-- MEM_WB(i-2) Stage Data	
 					
 				elsif( (WB_FIN_Instructions(i-3).REG_WE = '1') and 
-					(WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs2)
+					   (WB_FIN_Instructions(i-3).vd /="00000") and
+					   (WB_FIN_Instructions(i-3).Xout = '0'  ) and  
+					   (WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vs2)
 				) then
 					E_FB(i) <= "100";	-- WB_FIN Stage Data	
 					
@@ -988,6 +1064,8 @@ begin
 			-----------------------------All other instructions-----------------------------------
 			else
 				if	((MEM_WB_Instructions(i-1).REG_WE = '1') and 
+					 (MEM_WB_Instructions(i-1).vd /="00000") and
+					 (MEM_WB_Instructions(i-1).Xout = '0'  ) and  
 					 (MEM_WB_Instructions(i-1).vd = RD_EXE_Instructions(i).vd)
 					) then
 						E_FC(i) <= "010";	-- MEM_WB(i-1)	
@@ -1013,6 +1091,8 @@ begin
 			-----------------------------2nd Instruction Forwarding-----------------------------------
 			elsif i = 1 then
 				if( (EXE_MEM_Instructions(0).REG_WE = '1') and    -- Previ Instruction writes to Reg
+					(EXE_MEM_Instructions(0).vd /="00000") and
+					(EXE_MEM_Instructions(0).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(0).vd = RD_EXE_Instructions(1).vd)
 				) then
 					E_FC(1) <= "001";	-- EX_MEM(i-1)
@@ -1024,11 +1104,15 @@ begin
 			-----------------------------3rd Instruction Forwarding-----------------------------------
 			elsif i = 2 then
 				if( (EXE_MEM_Instructions(1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(1).vd /="00000") and
+					(EXE_MEM_Instructions(1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(1).vd = RD_EXE_Instructions(2).vd)
 				) then
 					E_FC(i) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(0).REG_WE = '1') and 
+						(MEM_WB_Instructions(0).vd /="00000") and
+						(MEM_WB_Instructions(0).Xout = '0'  ) and  
 						(MEM_WB_Instructions(0).vd = RD_EXE_Instructions(2).vd)
 				) then
 					E_FC(i) <= "011";	-- MEM_WB(i-2) Stage Data		
@@ -1038,17 +1122,23 @@ begin
 			------------------------------4,5,6,7 Instruction Forwarding-----------------------------------
 			else
 				if( (EXE_MEM_Instructions(i-1).REG_WE = '1') and 
+					(EXE_MEM_Instructions(i-1).vd /="00000") and
+					(EXE_MEM_Instructions(i-1).Xout = '0'  ) and  
 					(EXE_MEM_Instructions(i-1).vd = RD_EXE_Instructions(i).vd)
 				) then
 					E_FC(i) <= "001";	-- EX_MEM(i-1)
 					
 				elsif(  (MEM_WB_Instructions(i-2).REG_WE = '1') and 
+						(MEM_WB_Instructions(i-2).vd /="00000") and
+						(MEM_WB_Instructions(i-2).Xout = '0'  ) and  
 						(MEM_WB_Instructions(i-2).vd = RD_EXE_Instructions(i).vd)
 				) then
 					E_FC(i) <= "011";	-- MEM_WB(i-2) Stage Data	
 					
 				elsif( (WB_FIN_Instructions(i-3).REG_WE = '1') and 
-					(WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vd)
+					   (WB_FIN_Instructions(i-3).vd /="00000") and
+					   (WB_FIN_Instructions(i-3).Xout = '0'  ) and  
+					   (WB_FIN_Instructions(i-3).vd = RD_EXE_Instructions(i).vd)
 				) then
 					E_FC(i) <= "100";	-- WB_FIN Stage Data	
 					
@@ -1090,7 +1180,8 @@ begin
 			-----------------------------2nd Instruction Forwarding-----------------------------------
 			elsif i = 1 then
 				if( (MEM_WB_Instructions(0).REG_WE = '1') and    -- Previ Instruction writes to Reg
-					(MEM_WB_Instructions(0).vd /="00000") and 	-- Prev inst is not a vector mask instructiopn
+					(MEM_WB_Instructions(0).vd /="00000") and 	-- Prev inst is not a vector mask instruction
+					(MEM_WB_Instructions(0).Xout = '0'  ) and	-- Prev Instruction should not output a scalar  
 					(EXE_MEM_Instructions(1).dmw = '1') and  -- Only for Store Instructions
 					(MEM_WB_Instructions(0).vd = EXE_MEM_Instructions(1).vd)
 				) then
@@ -1103,6 +1194,7 @@ begin
 			else
 				if( (MEM_WB_Instructions(i-1).REG_WE = '1') and 
 					(MEM_WB_Instructions(i-1).vd /="00000") and 
+					(MEM_WB_Instructions(i-1).Xout = '0'  ) and	-- Prev Instruction should not output a scalar 
 					(EXE_MEM_Instructions(i).dmw = '1') and  -- Only for Store Instructions
 					(MEM_WB_Instructions(i-1).vd = EXE_MEM_Instructions(i).vd)
 				) then
@@ -1110,6 +1202,7 @@ begin
 					
 				elsif(  (WB_FIN_Instructions(i-2).REG_WE = '1') and 
 						(WB_FIN_Instructions(i-2).vd /="00000") and 
+						(WB_FIN_Instructions(i-2).Xout = '0'  ) and	-- Prev Instruction should not output a scalar 
 						(EXE_MEM_Instructions(i).dmw = '1'     ) and  -- Only for Store Instructions
 						(WB_FIN_Instructions(i-2).vd = EXE_MEM_Instructions(i).vd)
 				) then
@@ -1135,7 +1228,7 @@ end process mem_din_chain;
 --	    op3			| 	   E_FC				| 		EXE Stage				//
 --	    mem_din		| 	   M_FB				| 		MEM Stage				//
 --   ---------------|---------------------- |--------------------------------//
-CHAINING: process(EXE_MEM_DATA_RD3,RD_EXE_DATA_RD3,RD_EXE_Instructions,EXE_MEM_Instructions,RD_EXE_DATA_RD1,RD_EXE_DATA_RD2,EXE_MEM_ALU_y,
+CHAINING: process(EXE_MEM_DATA_RD3,RD_EXE_DATA_RD3,Xoutreg_data,RD_EXE_Instructions,EXE_MEM_Instructions,RD_EXE_DATA_RD1,RD_EXE_DATA_RD2,EXE_MEM_ALU_y,
 					MEM_WB_DATA,WB_FIN_DATA,E_FA,E_FB,E_FC,M_FB)
 begin
 	for i in 0 to 7 loop
@@ -1151,7 +1244,11 @@ begin
 			--op2
 			op2(0) <=  RD_EXE_DATA_RD2(0);
 			-- op3
-			op3(0) 	<=   RD_EXE_DATA_RD3(0);
+			if RD_EXE_Instructions(0).Xout = '1' then
+				op3(0) 	<=   Xoutreg_data(0);
+			else
+				op3(0) 	<=   RD_EXE_DATA_RD3(0);
+			end if;
 			-- DMEM_DIN
 			dmem_din(0) <= EXE_MEM_DATA_RD3(0);		-- vs3: For Vector Stores {MEM Stage  Chained}
 		--------------------i=1 Case--------------------------EXE_MEM(i-1) and MEM_WB(i-1)
@@ -1173,12 +1270,16 @@ begin
 				when "010"   => op2(1) <=  MEM_WB_DATA(0);  -- MEM chaining
 				when others  => op2(1) <=  RD_EXE_DATA_RD2(1);    -- No chaining
 			end case;
-			--op3	
-			case E_FC(1) is
-				when "001"   => op3(1) <=  EXE_MEM_ALU_y(0);  -- EX-chaining
-				when "010"   => op3(1) <=  MEM_WB_DATA(0);  --MEMchaining
-				when others  => op3(1) <=  RD_EXE_DATA_RD3(1);	--no chaining
-			end case;
+			--op3		 
+			if RD_EXE_Instructions(1).Xout = '1' then
+				op3(1) 	<=   Xoutreg_data(1);
+			else
+				case E_FC(1) is
+					when "001"   => op3(1) <=  EXE_MEM_ALU_y(0);  -- EX-chaining
+					when "010"   => op3(1) <=  MEM_WB_DATA(0);  --MEMchaining
+					when others  => op3(1) <=  RD_EXE_DATA_RD3(1);	--no chaining
+				end case;
+			end if;
 			-- DMEM_DIN
 			if M_FB(1) = "010" then
 				dmem_din(1) <= MEM_WB_DATA(0);
@@ -1207,12 +1308,16 @@ begin
 				when others  => op2(2) <=  RD_EXE_DATA_RD2(2);
 			end case;
 			--op3
-			case E_FC(2) is
-				when "001"   => op3(2) <=  EXE_MEM_ALU_y(1);
-				when "010"   => op3(2) <=  MEM_WB_DATA(1);
-				when "011"   => op3(2) <=  MEM_WB_DATA(0);
-				when others  => op3(2) <=  RD_EXE_DATA_RD3(2);
-			end case;			
+			if RD_EXE_Instructions(2).Xout = '1' then
+				op3(2) 	<=   Xoutreg_data(2);
+			else
+				case E_FC(2) is
+					when "001"   => op3(2) <=  EXE_MEM_ALU_y(1);
+					when "010"   => op3(2) <=  MEM_WB_DATA(1);
+					when "011"   => op3(2) <=  MEM_WB_DATA(0);
+					when others  => op3(2) <=  RD_EXE_DATA_RD3(2);
+				end case;		
+			end if;	
 			-- DMEM_DIN
 			case M_FB(2) is
 				when "010" => dmem_din(2) <= MEM_WB_DATA(1);
@@ -1243,13 +1348,17 @@ begin
 				when others  => op2(i) <=  RD_EXE_DATA_RD2(i);
 			end case;
 			-- op3
-			case E_FC(i) is
-				when "001"   => op3(i) <=  EXE_MEM_ALU_y(i-1);
-				when "010"   => op3(i) <=  MEM_WB_DATA(i-1);
-				when "011"   => op3(i) <=  MEM_WB_DATA(i-2);
-				when "100"   => op3(i) <=  WB_FIN_DATA(i-3);
-				when others  => op3(i) <=  RD_EXE_DATA_RD3(i);
-			end case;
+			if RD_EXE_Instructions(i).Xout = '1' then
+				op3(i) 	<=   Xoutreg_data(i);
+			else
+				case E_FC(i) is
+					when "001"   => op3(i) <=  EXE_MEM_ALU_y(i-1);
+					when "010"   => op3(i) <=  MEM_WB_DATA(i-1);
+					when "011"   => op3(i) <=  MEM_WB_DATA(i-2);
+					when "100"   => op3(i) <=  WB_FIN_DATA(i-3);
+					when others  => op3(i) <=  RD_EXE_DATA_RD3(i);
+				end case;
+			end if;
 			-- DMEM_DIN
 			case M_FB(i) is
 				when "010" => dmem_din(i) <= MEM_WB_DATA(i-1);

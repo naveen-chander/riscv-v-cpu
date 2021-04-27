@@ -48,8 +48,8 @@ module IF_ID_EX
     
     
     output [63:0] led,
-    
-    
+    output ALU_monitor, // CAn be safely ignored. But this must be brought out ;
+                        // else, while of vector unit will get optimized!
     `ifdef itlb_def
     output vpn_to_ppn_req
     `endif
@@ -907,7 +907,9 @@ vector_top VECTOR_UNIT(
 			.release_counter		(Vector_release_counter	),
 			.freeze                 (Vector_freeze_PC       ),
 			.rs2_sel                (vector_unit_rs2_sel    ),
-			.rs1_sel                (vector_unit_rs1_sel    )
+			.rs1_sel                (vector_unit_rs1_sel    ),
+			.ALU_monitor            (ALU_monitor            )
+
 		);
 //----------------------------------------------------
 //-------------Delayed inst_out signal----------------

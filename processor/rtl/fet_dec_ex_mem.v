@@ -5,7 +5,7 @@ module fet_dec_ex_mem(
 // master inputs
 rst,clk,clk_x2,led,
 wb_ack_i, wb_err_i, wb_rty_i, wb_dat_i,wb_cyc_o, wb_adr_o, wb_stb_o, wb_we_o, wb_sel_o, wb_dat_o,wb_cti_o, wb_bte_o,
-clmode,cache_flush,cache_en,tick_en, addr_exception,
+clmode,cache_flush,cache_en,tick_en, addr_exception,ALU_monitor,
 interrupt
 //,out_t0,out_t1,out_t2,sp
 `ifdef itlb_def
@@ -31,7 +31,7 @@ output [7:0] wb_sel_o;
 output [63:0] wb_dat_o;
 output [5:0] wb_cti_o;
 output [3:0] wb_bte_o;
-
+output ALU_monitor;
 input cache_flush;
 input cache_en;
 
@@ -95,7 +95,7 @@ IF_ID_EX Pipeline( .CLK(clk),
                    .tick_en(tick_en),
                    .addr_exception(addr_exception),
                    .interrupt(interrupt),
-                   
+                   .ALU_monitor(ALU_monitor),
                    .led()
                    
                    `ifdef itlb_def
