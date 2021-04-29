@@ -107,12 +107,29 @@ type reg_array is array (31 downto 0) of std_logic_vector(31 downto 0);
 --------------------------------------------------------------------
 ---  COmponent Definitions ---------------------
 --------------------------------------------------------------------
+component cpu_inf is
+  Port ( 
+         clk          : in STD_LOGIC;
+         reset        : in STD_LOGIC;
+         ADDR_IN      : in STD_LOGIC_VECTOR (31 downto 0);
+         DMEM_DATA_RD : in op_array;
+         VREG_DATA_RD : in op_array;
+         WE_IN        : in STD_LOGIC;
+         vs1          : out STD_LOGIC_VECTOR (4 downto 0);
+         vd           : out STD_LOGIC_VECTOR (4 downto 0);
+         mem_addr     : out STD_LOGIC_VECTOR (11 downto 0);
+         DMEM_WE      : out done_array;
+         VREG_WE      : out done_array;
+         dout         : out STD_LOGIC_VECTOR (31 downto 0)
+        );
+end component;
+--------------------------------------------------------------------
 component alu is
 generic(width : integer :=32);
     Port ( op1 : in signed (width-1 downto 0);
            op2 : in signed (width-1 downto 0);
            op3 : in signed (width-1 downto 0);
-		   funct: in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
+		       funct: in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
            cin  : in STD_LOGIC;
            y    : out signed(width-1 downto 0);
            cout : out std_logic;
@@ -196,6 +213,7 @@ port(
 	y       		: out STD_LOGIC_VECTOR(31 DOWNTO 0)
 	);
 end component;
+
 -----------------------------------------------
 -- Memory Components
 COMPONENT DMEM_0

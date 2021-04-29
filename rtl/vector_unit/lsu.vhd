@@ -31,8 +31,6 @@ use xil_defaultlib.mypack.all;
 -- any Xilinx leaf cells in this code.
 --library UNISIM;
 --use UNISIM.VComponents.all;
-
-
 entity lsu is
 port(
 	RS1				: in  STD_LOGIC_VECTOR(31 DOWNTO 0);		-- Scalar Reg Store Data

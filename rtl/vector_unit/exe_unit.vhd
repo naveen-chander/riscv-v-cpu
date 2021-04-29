@@ -37,7 +37,12 @@ entity exe_unit is
 		I_clear		: in  std_logic;	-- Sync Clear for Instruction Bank
 		ALU_mon     : out std_logic;	-- Output brought out to prevent logic optimization
 		stall		: out std_logic;	-- High during Stall cycles
-		DONE		: out std_logic		-- High if Convoy is not executing an instruction
+		DONE		: out std_logic;	-- High if Convoy is not executing an instruction
+		----------------------Processor interface----------------------------------------
+		PROC_ADDR   : in  STD_LOGIC_VECTOR(31 downto 0);	-- Adress from CPU to RW VREG/VMEM
+		PROC_DIN    : in  STD_LOGIC_VECTOR(31 downto 0);	-- Write Data
+		PROC_WE		: in  STD_LOGIC;						-- WE
+		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0)		-- Read Data from VREG/VMEM
 		   );
 end exe_unit;
 -----------------------------------------------------------------
@@ -132,6 +137,9 @@ signal DMEM_DATA        : op_array;
 signal DMEM_DATA_Xbar   : op_array;
 signal dmem_din         : op_array;
 signal dmem_din_Xbar    : op_array;
+signal DMEM_DIN_CPU     : op_array;
+
+
 signal Xoutreg_data     : op_array;
 
 signal MEM_WB_Instructions : array_i_rec;
@@ -151,6 +159,22 @@ signal slide_val		   : std_logic_vector(1 downto 0);
 signal ALU_mon_int         : std_logic_vector(34 downto 0);		
 ------------------------------------------------------------
 signal Instructions		   : array_i_rec;
+------------------------------------------------------------
+-- CPU Interface Related
+signal vs1_VEC_CPU			: reg_select;		-- Signal oing into VREG
+signal vd_VEC_CPU			: reg_select;
+signal vs1_CPU				: STD_LOGIC_VECTOR(4 DOWNTO 0);	-- CPU's vs1 Select
+signal vd_CPU				: STD_LOGIC_VECTOR(4 DOWNTO 0);
+signal VREG_WE_CPU		    : done_array;	
+signal DONE_int             : STD_LOGIC;					-- Selector for CPU/VECTOR MUX
+signal DMEM_ADDR_VEC_CPU	: dmem_addr_array;
+signal DMEM_DIN_VEC_CPU 	: op_array;
+signal DMEM_WE_VEC_CPU  	: done_array;
+signal DMEM_WE_CPU  		: done_array;
+signal REG_DATA_WR_VEC_CPU 	: op_array;
+signal VREG_WE_VEC_CPU		: done_array;
+signal DMEM_ADDR_CPU    	: std_logic_vector(11 downto 0);
+
 ------------------------------------------------------------
 -- Vector Permutation Related
 --signal scalar_uimm5        : std_logic;
@@ -196,11 +220,16 @@ stall <= stall_q OR DIV_BUSY(0) OR
 								
 RD_EXE_count_en <= not (stall_q);
 								
-DONE <= DONEs_internal(0) and DONEs_internal(1) and MEM_WB_DONEs(0) and MEM_WB_DONEs(1) and
-		DONEs_internal(2) and DONEs_internal(3) and MEM_WB_DONEs(2) and MEM_WB_DONEs(3) and
-		DONEs_internal(4) and DONEs_internal(5) and MEM_WB_DONEs(4) and MEM_WB_DONEs(5) and
-		DONEs_internal(6) and DONEs_internal(7) and MEM_WB_DONEs(6) and MEM_WB_DONEs(7);
+DONE_int <= DONEs_internal(0) and DONEs_internal(1) and WB_FIN_DONEs(0) and WB_FIN_DONEs(1) and
+			DONEs_internal(2) and DONEs_internal(3) and WB_FIN_DONEs(2) and WB_FIN_DONEs(3) and
+			DONEs_internal(4) and DONEs_internal(5) and WB_FIN_DONEs(4) and WB_FIN_DONEs(5) and
+			DONEs_internal(6) and DONEs_internal(7) and WB_FIN_DONEs(6) and WB_FIN_DONEs(7);
 		
+------------------------------------------------------
+DONE	 <= DONEs_internal(0) and DONEs_internal(1) and MEM_WB_DONEs(0) and MEM_WB_DONEs(1) and
+			DONEs_internal(2) and DONEs_internal(3) and MEM_WB_DONEs(2) and MEM_WB_DONEs(3) and
+			DONEs_internal(4) and DONEs_internal(5) and MEM_WB_DONEs(4) and MEM_WB_DONEs(5) and
+			DONEs_internal(6) and DONEs_internal(7) and MEM_WB_DONEs(6) and MEM_WB_DONEs(7);
 ------------------------------------------------------
 Instruction_bank: process(clk,reset)
 begin
@@ -294,25 +323,25 @@ GEN_DIVIDERs:
 ------------------------------------------------------
 GEN_VRFS:
 	for i in 0 to 7 generate
-	vrf_gen: vrf_bank generic map(32)
-	port map
-	(
-		clk 	 	=> clk 				    ,
-		reset 	 	=> reset 			    ,
-		bankID      => i            	    ,
-		wr_count	=> MEM_WB_counts(i)	    , 	
-		rd_count	=> counts(i)	        , 	
-		shift_count => shift_count(i)       ,
-		DONE		=> DONEs_internal(i) 	,
-		vl			=> vl					,
-		vd		 	=> vd(i)		 		,		
-		vs1		 	=> vs1(i)				,		
-		vs2		 	=> vs2(i)				,			
-		vs3		 	=> vs3(i)				,			
-		vs4		 	=> vs4(i)				,			
-		DATA_WR	 	=> REG_DATA_WR(i) 		,		
-		WE		 	=> VREG_WE(i)			,
-		v0_DATA		=> v0_DATA(i)			,
+	vrf_gen: vrf_bank generic map(32) 
+	port map 
+	( 
+		clk 	 	=> clk 				    , 
+		reset 	 	=> reset 			    , 
+		bankID      => i            	    , 
+		wr_count	=> MEM_WB_counts(i)	    ,  	
+		rd_count	=> counts(i)	        ,  	
+		shift_count => shift_count(i)       , 
+		DONE		=> DONEs_internal(i) 	, 
+		vl			=> vl					, 
+		vd		 	=> vd_VEC_CPU(i)		, 	-- From VEC/CPU
+		vs1		 	=> vs1_VEC_CPU(i)		, 	-- From VEC/CPU	
+		vs2		 	=> vs2(i)				, 			
+		vs3		 	=> vs3(i)				, 			
+		vs4		 	=> vs4(i)				, 			
+		DATA_WR	 	=> REG_DATA_WR_VEC_CPU(i) ,	-- From VEC/CPU	
+		WE		 	=> VREG_WE_VEC_CPU(i)	, -- For VEC and CPU
+		v0_DATA		=> v0_DATA(i)			,	
 		DATA_RD1 	=> DATA_RD1(i)			,	
 		DATA_RD2 	=> DATA_RD2(i)			,
 		DATA_RD3 	=> DATA_RD3(i)			,
@@ -320,6 +349,7 @@ GEN_VRFS:
 	);
 	end generate GEN_VRFS;
 ------------------------------------------------------
+
 GEN_LSUs:
 	for i in 0 to 7 generate
 	lsu_gen: lsu port map(
@@ -361,66 +391,66 @@ GEN_LSUs:
 -- DMEMs
 DMEM0: DMEM_0 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(0),
-    addra 	=> DMEM_ADDR_Xbar(0),
-    dina 	=> dmem_din_Xbar(0),
+    wea(0) 	=> DMEM_WE_VEC_CPU(0),
+    addra 	=> DMEM_ADDR_VEC_CPU(0),
+    dina 	=> DMEM_DIN_VEC_CPU(0),
     douta 	=> DMEM_DATA(0)
 );
  
 DMEM1: DMEM_1 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(1),
-    addra 	=> DMEM_ADDR_Xbar(1),
-    dina 	=> dmem_din_Xbar(1),
+    wea(0) 	=> DMEM_WE_VEC_CPU(1),
+    addra 	=> DMEM_ADDR_VEC_CPU(1),
+    dina 	=> DMEM_DIN_VEC_CPU(1),
     douta 	=> DMEM_DATA(1)
 
 );
  
 DMEM2: DMEM_2 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(2),
-    addra 	=> DMEM_ADDR_Xbar(2),
-    dina 	=> dmem_din_Xbar(2),
+    wea(0) 	=> DMEM_WE_VEC_CPU(2),
+    addra 	=> DMEM_ADDR_VEC_CPU(2),
+    dina 	=> DMEM_DIN_VEC_CPU(2),
     douta 	=> DMEM_DATA(2)
 );
 
 DMEM3: DMEM_3 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(3),
-    addra 	=> DMEM_ADDR_Xbar(3),
-    dina 	=> dmem_din_Xbar(3),
+    wea(0) 	=> DMEM_WE_VEC_CPU(3),
+    addra 	=> DMEM_ADDR_VEC_CPU(3),
+    dina 	=> DMEM_DIN_VEC_CPU(3),
     douta 	=> DMEM_DATA(3)
 );
 
 DMEM4: DMEM_4 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(4),
-    addra 	=> DMEM_ADDR_Xbar(4),
-    dina 	=> dmem_din_Xbar(4),
+    wea(0) 	=> DMEM_WE_VEC_CPU(4),
+    addra 	=> DMEM_ADDR_VEC_CPU(4),
+    dina 	=> DMEM_DIN_VEC_CPU(4),
     douta 	=> DMEM_DATA(4)
 );
 
 DMEM5: DMEM_5 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(5),
-    addra 	=> DMEM_ADDR_Xbar(5),
-    dina 	=> dmem_din_Xbar(5),
+    wea(0) 	=> DMEM_WE_VEC_CPU(5),
+    addra 	=> DMEM_ADDR_VEC_CPU(5),
+    dina 	=> DMEM_DIN_VEC_CPU(5),
     douta 	=> DMEM_DATA(5)
 );
 
 DMEM6: DMEM_6 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(6),
-    addra 	=> DMEM_ADDR_Xbar(6),
-    dina 	=> dmem_din_Xbar(6),
+    wea(0) 	=> DMEM_WE_VEC_CPU(6),
+    addra 	=> DMEM_ADDR_VEC_CPU(6),
+    dina 	=> DMEM_DIN_VEC_CPU(6),
     douta 	=> DMEM_DATA(6)
 );
 
 DMEM7: DMEM_7 port map(
     clka 	=> clk,
-    wea(0) 	=> DMEM_WE_Xbar(7),
-    addra 	=> DMEM_ADDR_Xbar(7),
-    dina 	=> dmem_din_Xbar(7),
+    wea(0) 	=> DMEM_WE_VEC_CPU(7),
+    addra 	=> DMEM_ADDR_VEC_CPU(7),
+    dina 	=> DMEM_DIN_VEC_CPU(7),
     douta 	=> DMEM_DATA(7)
 );
 
@@ -434,6 +464,54 @@ X_REGS: Xoutreg port map
         RDATA       =>  Xoutreg_data,
         WE          =>  Xoutreg_WE
 ); 
+------------------------------------------------------	
+-- CPU INterface
+VECTOR_CPU_INF: cpu_inf port map(
+		   clk			 => clk			 ,
+		   reset		 => reset		 ,
+		   ADDR_IN       => PROC_ADDR	 ,
+		   DMEM_DATA_RD  => DMEM_DATA	 ,
+		   VREG_DATA_RD  => DATA_RD1	 ,
+		   WE_IN         => PROC_WE		 ,
+		   vs1           => vs1_cpu		 ,
+		   vd            => vd_cpu		 ,
+		   mem_addr      => DMEM_ADDR_CPU,
+		   DMEM_WE       => DMEM_WE_CPU  ,
+		   VREG_WE       => VREG_WE_CPU	 ,
+		   dout          => PROC_DOUT	 
+		  );
+------------------------------------------------------	
+-- CPU INterface
+VECTOR_CPU_MUX: process(vs1, vd, vs1_CPU, vd_CPU, DMEM_WE_Xbar, DMEM_ADDR_Xbar, dmem_din_xbar,
+						DMEM_ADDR_CPU, PROC_DIN, DONE_int, DMEM_WE_CPU, VREG_WE_CPU,REG_DATA_WR)
+
+begin
+	if DONE_int = '1' then -- CPU Access Case
+		for i in 0 to 7 loop
+			-- DMEM Signals
+			DMEM_ADDR_VEC_CPU(i)  <= DMEM_ADDR_CPU;
+			DMEM_DIN_VEC_CPU(i)   <= PROC_DIN ;
+			DMEM_WE_VEC_CPU(i)    <= DMEM_WE_CPU(i);
+			--VREG Signals
+			vs1_VEC_CPU(i)		  <= vs1_cpu;
+			vd_VEC_CPU(i)		  <= vd_cpu;
+			REG_DATA_WR_VEC_CPU(i)<= PROC_DIN;
+			VREG_WE_VEC_CPU(i)    <= VREG_WE_CPU(i);
+		end loop;
+	else
+	for i in 0 to 7 loop
+		-- DMEM Signals
+		DMEM_ADDR_VEC_CPU(i)  <= DMEM_ADDR_Xbar(i);
+		DMEM_DIN_VEC_CPU(i)   <= dmem_din_Xbar(i) ;
+		DMEM_WE_VEC_CPU(i)    <= DMEM_WE_Xbar(i);
+		--VREG Signals
+		vs1_VEC_CPU(i)		  <= vs1(i);
+		vd_VEC_CPU(i)		  <= vd(i);
+		REG_DATA_WR_VEC_CPU(i)<= REG_DATA_WR(i);
+		VREG_WE_VEC_CPU(i)    <= VREG_WE(i);
+	end loop;	
+	end if;
+end process VECTOR_CPU_MUX;	
 ------------------------------------------------------	
 
 DMEM_WE_GEN: process(MEM_WB_DONEs, DONEs_internal, EXE_MEM_Instructions)

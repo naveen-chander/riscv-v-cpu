@@ -23,12 +23,17 @@
 module v_wrapper(
 input 			clk 			,
 input 			reset 			,
-input [8:0]		vl				,		// Vector LENGTH Register
+input [8:0]		vl				,	// Vector LENGTH Register
 input 			I_clear			,	// Clear all instructions
 input [2:0]		I_id			,	// Instruction 0 --> 7
 output 			ALU_mon         ,
 output 			stall			,
 output  		DONE            ,
+//Processor interface Related   ,
+input [31:0]	proc_addr		,
+input [31:0]	proc_din		,
+output[31:0]	proc_dout		,
+input			proc_we			,
 input 			I_start   		,
 input [4:0]		I_vs1     		,
 input [4:0]		I_vs2     		,
@@ -57,6 +62,10 @@ wrapper wrapper_vhd(
 	.ALU_mon     	(ALU_mon    ),
 	.stall			(stall		),
 	.DONE        	(DONE       ),
+	.PROC_ADDR		(proc_addr	),
+	.PROC_DIN		(proc_din   ),
+	.PROC_DOUT      (proc_dout  ),
+	.PROC_WE        (proc_we    ),
 	.I_start   		(I_start   	),
 	.I_vs1     		(I_vs1     	),
 	.I_vs2     		(I_vs2     	),

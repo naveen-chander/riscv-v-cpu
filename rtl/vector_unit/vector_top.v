@@ -40,6 +40,12 @@ module vector_top(
     input [8:0] 		vl,
     input 	            freeze_vector_ops,
     input 	            Data_Cache__Stall,
+	// Processor interface Related//
+	input [31:0]		proc_addr,				// Scalar Core Accessing VREG/VMEM Address
+	input [31:0]		proc_din,				// Data to be Written into VREG/VMEM
+	output [31:0]		proc_dout,				// Data Read from VREG/VMEM
+	input 				proc_we,				// Write Enable
+	//
 	output reg 		    sv_vv,
 	output reg			v_stall,
 	output reg			freeze_x,
@@ -51,7 +57,12 @@ module vector_top(
     );
 ///////////////////////////////////////////////	
 // Define REGs and WIREs
-
+//Processor interface Related
+reg [31:0]	vec_addr;
+reg [31:0] 	vec_din;
+reg [31:0] 	vec_dout;
+reg 		vec_we;
+// ----------------Vector Unit Related
 reg 			I_clear		;		// Clears all 8 vector instructions in the Vector Execution Unit
 reg [2:0]		I_id		;		// Instruction ID : 0-->7 of ith instruction
 reg 			I_start   	;		// Start Signal to begin execution of ith instruction
@@ -186,7 +197,7 @@ assign ALU_monitor = ALU_mon;
 vec_decoder VECTOR_DECODER_PRES(
 	.Instruction     (Instruction__IF_ID	 ),
 	.reset			 (reset			         ),
-	.Inst_Cache__Stall(0			         ),
+	.Inst_Cache__Stall(1'b0			         ),
 	.Data_Cache__Stall(freeze_vector	     ),
 	.S_VECn			 (S_VECn				 ),
 	.decode__vs1     (decode_pres__vs1       ),
@@ -210,7 +221,7 @@ vec_decoder VECTOR_DECODER_PRES(
 	vec_decoder VECTOR_DECODER_PREV(
 	.Instruction     (Instruction__ID_EX     ),
 	.reset			 (reset			         ),
-	.Inst_Cache__Stall(0         ),
+	.Inst_Cache__Stall(1'b0         ),
 	.Data_Cache__Stall(freeze_vector	     ),
 	.S_VECn			 (S_VECn_prev		     ),
 	.decode__vs1     (decode_prev__vs1       ),
@@ -243,6 +254,10 @@ v_wrapper  VEC_EXE_UNIT(
 	.ALU_mon     	(ALU_mon    ),
 	.stall			(stall		),
 	.DONE        	(DONE       ),
+	.proc_addr      (proc_addr  ),
+	.proc_din		(proc_din	),
+	.proc_dout		(proc_dout	),
+	.proc_we		(proc_we	),
 	.I_start   		(I_start   	),
 	.I_vs1     		(I_vs1     	),
 	.I_vs2     		(I_vs2     	),
@@ -573,4 +588,30 @@ begin
 		end
 end
 
+///////////////////////////////////Processor interface /////////////////////////
+// Functions - 
+// 1. Processor Reads VREG
+// 1. Processor Reads VMEM
+// 1. Processor Writes VREG
+// 1. Processor Writes VMEM
+// Memory Map
+// VREG : 0x0008_0000 - 0008_0FFC
+// VREG : 0x0004_0000 - 0005_0FFC
+/*
+always @(*) begin
+	if (reset | v_busy) begin
+		proc_addr 	<= 0;
+		proc_din  	<= 0;
+		proc_we   	<= 0;
+		proc_dout	<= 0;
+	end
+	else begin
+		proc_addr 	<= proc_addr;
+		proc_din  	<= proc_din;
+		proc_we   	<= proc_we;
+		proc_dout	<= proc_dout;
+	end
+end
+*/
 endmodule
+

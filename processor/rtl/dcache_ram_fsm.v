@@ -50,7 +50,7 @@ module dcache_ram_fsm
     output reg Dirty_bit_Write_En_w1,               
    
     
-    
+    input non_cacheable,
     input [25:0] tag_out_tlb,                       // TLB tag output
     input tag_hit_tlb,                              // TLB tag hit
  
@@ -194,8 +194,8 @@ assign    load_mask[0] = 256'h00000000000000000000000000000000000000000000000000
 assign    load_mask[1] = 256'h000000000000000000000000000000000000000000000000000000000000FFFF;
 assign    load_mask[2] = 256'h00000000000000000000000000000000000000000000000000000000FFFFFFFF;
 assign    load_mask[3] = 256'h00000000000000000000000000000000000000000000000000000000FFFFFFFF;
-assign    load_mask[4] = 256'h00000000000000000000000000000000000000000000000000000000000000FF; 
-assign    load_mask[5] = 256'h000000000000000000000000000000000000000000000000000000000000FFFF;
+//assign    load_mask[4] = 256'h00000000000000000000000000000000000000000000000000000000000000FF; 
+//assign    load_mask[5] = 256'h000000000000000000000000000000000000000000000000000000000000FFFF;
 
 
 
@@ -587,6 +587,18 @@ always @(*) begin
             bus_we <= 1'b0;
             bus_data_en <= 1'b0;
             bus_addr <= 32'b0;
+
+            if (non_cacheable) begin
+                nextState <= START;
+                Store_Buffer_Valid <= 0;
+                Store_Buffer_Write <= 1'b0;
+                i <= Load_Store_op[4:2];
+                j <= MEM_Addr[4:2];
+                k <= MEM_Addr[1:0];
+                LRU_Addr <= 8'b0;
+            end
+                
+            else begin
             
             if (Store_Buffer_Valid__reg)
                 Store_Buffer_Valid <= 1'b1;
@@ -618,6 +630,7 @@ always @(*) begin
                 LRU_Addr <= 8'b0;
                 
                 nextState <= START;
+            end
             end  
         end    
         

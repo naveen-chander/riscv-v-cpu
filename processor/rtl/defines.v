@@ -28,6 +28,11 @@
 `define vsetvl 7'b1010111
 `define vec_len_csr_addr 12'hC20
 `define max_vector_length 9'd64 // allocated 9 bits to accomodate for vl =256 in future
+
+`define VEC_REG_START_ADDR 32'h0008_0000
+`define VEC_REG_END_ADDR 32'h0008_03FC
+`define VEC_MEM_START_ADDR 32'h0004_0000
+`define VEC_MEM_END_ADDR 32'h0005_FFFC
 //--------------------------------
 `define op32_fp_loadop 7'b0000111
 `define op32_fp_storeop 7'b0100111

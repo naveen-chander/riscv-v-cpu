@@ -54,7 +54,11 @@ port(
 	I_Xout	 		: in std_logic;
 	I_mode_lsu		: in std_logic_vector(1 downto 0);	
 	-----------------------------------------------------
-    DONE             : out std_logic
+    DONE            : out std_logic;
+	PROC_ADDR		: in  std_logic_vector(31 downto 0);
+	PROC_DIN		: in  std_logic_vector(31 downto 0);
+	PROC_WE			: in  std_logic;
+	PROC_DOUT		: out std_logic_vector(31 downto 0)
 	
 );
 
@@ -64,14 +68,19 @@ architecture Behavioral of wrapper is
 component exe_unit is
     Port  ( 
 	    clk 		: in  STD_LOGIC;
-        reset 		: in  STD_LOGIC;	-- Asynchronous RESET
-		vl			: in  STD_LOGIC_VECTOR(8 DOWNTO 0);			-- Vector LENGTH Register
-		Instruction : in  i_rec;		-- Instruction Specification
-		I_id		: in  std_logic_vector(2 downto 0);	-- Id of Instructions in I-Bank
-		I_clear		: in  std_logic;	-- Sync Clear for Instruction Bank
-		ALU_mon     : out std_logic;	-- Output brought out to prevent logic optimization
-		stall		: out std_logic;	-- High during Stall cycles
-		DONE		: out std_logic		-- High if Convoy is not executing an instruction
+        reset 		: in  STD_LOGIC;						-- Asynchronous RESET
+		vl			: in  STD_LOGIC_VECTOR(8 DOWNTO 0);		-- Vector LENGTH Register
+		Instruction : in  i_rec;							-- Instruction Specification
+		I_id		: in  std_logic_vector(2 downto 0);		-- Id of Instructions in I-Bank
+		I_clear		: in  std_logic;						-- Sync Clear for Instruction Bank
+		ALU_mon     : out std_logic;						-- Output brought out to prevent logic optimization
+		stall		: out std_logic;						-- High during Stall cycles
+		DONE		: out std_logic;						-- High if Convoy is not executing an instruction
+		----------------------Processor interface----------------------------------------
+		PROC_ADDR   : in  STD_LOGIC_VECTOR(31 downto 0);	-- Adress from CPU to RW VREG/VMEM
+		PROC_DIN    : in  STD_LOGIC_VECTOR(31 downto 0);	-- Write Data
+		PROC_WE		: in  STD_LOGIC;						-- WE
+		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0)		-- Read Data from VREG/VMEM
 		   );
 end component;
 
@@ -104,7 +113,11 @@ VECTOR_EXE_UNIT_PIPE: exe_unit port map(
     Instruction.Xout	 	=> I_Xout	 		,	
     Instruction.mode_lsu	=> I_mode_lsu		,	
 	-------------------------------------------------
-    DONE                        => DONE
+    DONE                    => DONE				,
+	PROC_ADDR				=> PROC_ADDR		,
+	PROC_DIN				=> PROC_DIN			,
+	PROC_WE					=> PROC_WE			,
+	PROC_DOUT				=> PROC_DOUT		
 	);
 	
 end Behavioral;

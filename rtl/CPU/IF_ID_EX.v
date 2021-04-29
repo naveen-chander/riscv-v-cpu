@@ -171,7 +171,7 @@ wire FP__Load_Inst__id_ex;
 wire FP__Store_Inst__id_ex;
 
 wire sv_vv;		//Scalar Vector or vector vector
-
+reg  proc_vec_mem_we;
 
 reg  [4:0] FP__RD_Addr__ID_EX;
 reg  FP__Reg_Write_En__ID_EX;
@@ -240,6 +240,7 @@ wire [63:0] FP__Store_Data__ex_mem;
 wire FP__Load_Inst__ex_mem; 
 wire FP__Store_Inst__ex_mem;
 
+reg  [31:0] proc_addr_port1_EX_MEM;
 reg  [63:0] FP__RD_Data__EX_MEM;
 reg  [31:0] FP__RD_Data_Int__EX_MEM;
 reg  [4:0] FP__RD_Addr__EX_MEM;
@@ -252,6 +253,7 @@ wire [4:0] FPU_flags;
 wire [2:0] frm;
 
 
+reg vector_data_read_sel;
 // MEM_WB Register
 wire [31:0] RD_Data__mem_wb;
 reg  [31:0] RD_Data__MEM_WB;
@@ -335,8 +337,11 @@ wire irq_ctrl_dec_src2;
 wire IF_ID_Freeze__irq;
 wire [8:0] vector_length;
 wire freeze_vector_ops;			// vector unit will freeze with assertion
+wire [31:0] vector_mem_data;
 
 reg Inst_Cache__Stall__reg;
+
+reg [31:0] dmem_read_data;
 reg [31:0] proc_data_port1_int__reg;
 reg FPU__Stall__reg;
 reg [63:0] Double_Load_Data;
@@ -381,7 +386,7 @@ assign tick_en  = tick_en_int && mtie;
 
 assign badaddr = ((~proc_addr_port1[0] && ~proc_addr_port1[1]) || (~pc_id_ex[0] && ~pc_id_ex[1])) ;
 
-assign RD_Data__mem_wb = (((~Load_Store_Op__EX_MEM[1]) & (Load_Store_Op__EX_MEM[0])) | SC_Inst__EX_MEM) ? (((Inst_Cache__Stall__reg == 1'b1) || (FPU__Stall__reg == 1'b1) || (Mult_Div_unit__Stall__reg == 1'b1)) ? proc_data_port1_int__reg : proc_data_port1_int) : RD_Data__EX_MEM;         //For conventional loads
+assign RD_Data__mem_wb = (((~Load_Store_Op__EX_MEM[1]) & (Load_Store_Op__EX_MEM[0])) | SC_Inst__EX_MEM) ? (((Inst_Cache__Stall__reg == 1'b1) || (FPU__Stall__reg == 1'b1) || (Mult_Div_unit__Stall__reg == 1'b1)) ? proc_data_port1_int__reg : dmem_read_data) : RD_Data__EX_MEM;         //For conventional loads
 
 assign FP__RD_Data__mem_wb = ((~Load_Store_Op__EX_MEM[1]) & (Load_Store_Op__EX_MEM[0])) ? (((Inst_Cache__Stall__reg == 1'b1) || (FPU__Stall__reg == 1'b1) || (Mult_Div_unit__Stall__reg == 1'b1)) ? ((FP__SP_DP__EX_MEM) ? Double_Load_Data : proc_data_port1_int__reg) : ((FP__SP_DP__EX_MEM) ? {proc_data_port1_int,Double_Load_Buffer} : proc_data_port1_int)) : FP__RD_Data__EX_MEM;    
 
@@ -638,6 +643,7 @@ always @(posedge CLK ) begin
         Load_Store_Op__EX_MEM <= 5'b0; 
         SC_Inst__EX_MEM <= 1'b0; 
         proc_data_port1_int__reg <= 32'b0;
+        proc_addr_port1_EX_MEM <= 32'b0;
         
         
         FP__RD_Data__EX_MEM <= 64'b0;       
@@ -660,6 +666,7 @@ always @(posedge CLK ) begin
         Load_Store_Op__EX_MEM <= Load_Store_Op__ex_mem; 
         SC_Inst__EX_MEM <= SC_Inst__ex_mem; 
         
+        proc_addr_port1_EX_MEM <= proc_addr_port1;
         
         FP__RD_Data__EX_MEM <= FP__RD_Data__ex_mem;      
         FP__RD_Data_Int__EX_MEM <= FP__RD_Data_Int__ex_mem;  
@@ -886,8 +893,26 @@ DECODE ID( .CLK(CLK),
 //    		    Mtech Microelectronics and VLSI Design
 //-------------------------------------------------------------
 // freeze signal for stalling vector unit
+reg monitor;
 assign freeze_vector_ops = (Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | Inst_Cache__Stall) ;
- 
+always @(*) begin
+    if (Load_Store_Op__ex_mem == 5'b01010) // sw instruction
+        proc_vec_mem_we <= 1'b1;
+    else 
+        proc_vec_mem_we <= 1'b0;
+end
+always @(*) begin
+    if ((proc_addr_port1_EX_MEM >= `VEC_REG_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_REG_END_ADDR) ||
+        (proc_addr_port1_EX_MEM >= `VEC_MEM_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_MEM_END_ADDR) &&
+        (Load_Store_Op__EX_MEM == 5'b01001)) begin
+        dmem_read_data <= vector_mem_data;
+        monitor <=1'b1;
+        end
+    else begin
+        dmem_read_data <= proc_data_port1_int;
+        monitor <= 1'b0;
+    end
+end
 //---------------------------------------------------------------
 vector_top VECTOR_UNIT(
 
@@ -902,6 +927,10 @@ vector_top VECTOR_UNIT(
 			.freeze_vector_ops      (freeze_vector_ops      ),
 			.v_stall                (Vector__Stall          ),
 			.Data_Cache__Stall      (Data_Cache__Stall      ),
+            .proc_addr              (proc_addr_port1        ),
+            .proc_din               (Store_Data__ex_mem     ),
+            .proc_dout              (vector_mem_data        ),
+            .proc_we                (proc_vec_mem_we        ),
 			.sv_vv					(sv_vv					),
 			.freeze_x               (Vector_freeze_x        ),
 			.release_counter		(Vector_release_counter	),
