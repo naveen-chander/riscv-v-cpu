@@ -896,14 +896,16 @@ DECODE ID( .CLK(CLK),
 reg monitor;
 assign freeze_vector_ops = (Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | Inst_Cache__Stall) ;
 always @(*) begin
-    if (Load_Store_Op__ex_mem == 5'b01010) // sw instruction
+    if (( ((proc_addr_port1 >= `VEC_REG_START_ADDR) && (proc_addr_port1 <= `VEC_REG_END_ADDR)) ||
+          ((proc_addr_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_port1 <= `VEC_MEM_END_ADDR)) ) &&
+        (Load_Store_Op__ex_mem == 5'b01010))
         proc_vec_mem_we <= 1'b1;
     else 
         proc_vec_mem_we <= 1'b0;
 end
 always @(*) begin
-    if ((proc_addr_port1_EX_MEM >= `VEC_REG_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_REG_END_ADDR) ||
-        (proc_addr_port1_EX_MEM >= `VEC_MEM_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_MEM_END_ADDR) &&
+    if((  ((proc_addr_port1_EX_MEM >= `VEC_REG_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_REG_END_ADDR))||
+          ((proc_addr_port1_EX_MEM >= `VEC_MEM_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_MEM_END_ADDR)) ) &&
         (Load_Store_Op__EX_MEM == 5'b01001)) begin
         dmem_read_data <= vector_mem_data;
         monitor <=1'b1;
