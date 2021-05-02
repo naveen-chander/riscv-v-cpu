@@ -36,6 +36,7 @@
 `define funct6__vnmsac	 		6'b101111
 `define funct6__vredsum	 		6'b000000	// Same as vadd!
 `define funct6__vdot	 		6'b111001	// Dot Product
+`define funct6__vrelu	 		6'b001001	// Dot Product
 
 
 `define funct3__OPIVV	 		3'b000		// Integer Vector-Vector
@@ -44,6 +45,7 @@
 `define funct3__OPIVX	 		3'b100		// Integer Vector-Scalar {rs1}
 `define funct3__OPMVX	 		3'b110		// Integer Vector-Scalar {rs1}
 `define funct3__VCSR	 		3'b111		// To R/W Vector CSRs
+`define funct3__VRELU	 		3'b000		// To R/W Vector CSRs
 
 // 26.04.2021: The source code for Spike (and riscv-v toolchain) appears to have a mismatch 
 // with RVV_1.0 Spec document for decoding arithmetic  instructions.
@@ -62,6 +64,7 @@
 //		|vdot_vv		 |	11_1001     |	010		|
 //		|vdot_vx		 |	11_1001     |	110		|
 //		|vredsum_vx	 	 |	00_0000     |	010		|
+//		|vReLu_vx	 	 |	00_1001     |	000		| // Implements ReLu Instruction {However, vand_vx INST is mapped}
 //		+----------------+--------------+-----------+
 
 
@@ -216,6 +219,7 @@ always @(*) begin
 			`funct6__vmacc	 	    : decode__funct <= 4'b0011;
 			`funct6__vnmsac	 	    : decode__funct <= 4'b0100;
 			`funct6__vdot			: decode__funct <= 4'b0011;	// Same as MACC
+			`funct6__vrelu			: decode__funct <= 4'b0101;	// ReLu Instruction
 			default 				: decode__funct <= 4'b0000;  //vadd
 		endcase
 		decode__permute <= ( (opcode == `OP_VEC_ARITH) && (funct6 ==`funct6__vslidedown) ) ? 2'b01 : 0;	//Fix to slide1down

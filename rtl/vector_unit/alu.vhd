@@ -70,8 +70,8 @@ min_negative <= x"80" when WIDTH=8 else
 --------------------------------------------
 --- Multiply 
 prod <= ( (op1) * (op2));
---prod_h <= prod(55 downto 24);	-- for 
-prod_h <= prod(31 downto 0);	-- for non fixed point integer ops
+prod_h <= prod(55 downto 24);	-- for 
+--prod_h <= prod(31 downto 0);	-- for non fixed point integer ops
 mac  <= op3_int + ('0'&prod_h);
 msac <= op3_int - ('0'&prod_h);
 -- Adder
@@ -88,8 +88,8 @@ begin
 		when "011"	=> temp <= mac;
 		when "100"	=> temp <= msac;
 		when "101"  => --ReLu Function
-			if op1_int > 0 then
-				temp <= op1_int;
+			if op2_int > 0 then
+				temp <= op2_int;
 			else
 				temp <= (others=>'0');
 			end if;
