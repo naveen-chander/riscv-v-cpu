@@ -23,7 +23,7 @@
 `define vec_counter_thd 10
 `define max_release_count 4
 `define release_thd 3
-`define i_buf_fill_count `nLANES-1
+//`define i_buf_fill_count `nLANES-1
 
 `define OP_VEC_LOAD 			7'b0000111
 `define OP_VEC_STORE			7'b0100111
@@ -62,6 +62,7 @@ reg [31:0]	vec_addr;
 reg [31:0] 	vec_din;
 reg [31:0] 	vec_dout;
 reg 		vec_we;
+wire [3:0]   i_buf_fill_count;		// Limit for issuing I_Start
 // ----------------Vector Unit Related
 reg 			I_clear		;		// Clears all 8 vector instructions in the Vector Execution Unit
 reg [2:0]		I_id		;		// Instruction ID : 0-->7 of ith instruction
@@ -421,7 +422,8 @@ always @(posedge reset or posedge clk) begin
 	end
 end
 
-
+// Define i-buf_fill_count based on sv_vv
+assign i_buf_fill_count = sv_vv ? `nLANES : `nLANES -1 ;
 //////////////////////////////////////////////	
 //  Send Instructions from the Inst Record   //
 //////////////////////////////////////////////	
@@ -453,7 +455,7 @@ begin
 		//rs2_sel			 <= 0;
 	end
 
-	else if ( (~v_busy) && (~stall) && (vec_cycle_counter >= `i_buf_fill_count))				// If Convoy Execution has already started
+	else if ( (~v_busy) && (~stall) && (vec_cycle_counter >= i_buf_fill_count))				// If Convoy Execution has already started
 														// Vector Unit should not be stalling 
 														
 		begin
