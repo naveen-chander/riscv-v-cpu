@@ -336,7 +336,7 @@ wire irq_ctrl_dec_src1;
 wire irq_ctrl_dec_src2;
 wire IF_ID_Freeze__irq;
 wire [8:0] vector_length;
-wire freeze_vector_ops;			// vector unit will freeze with assertion
+reg  freeze_vector_ops;			// vector unit will freeze with assertion
 wire [31:0] vector_mem_data;
 
 reg Inst_Cache__Stall__reg;
@@ -894,7 +894,15 @@ DECODE ID( .CLK(CLK),
 //-------------------------------------------------------------
 // freeze signal for stalling vector unit
 reg monitor;
-assign freeze_vector_ops = (Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | Inst_Cache__Stall) ;
+/*-----------------------------------------------------------------------------------*/
+// Logic for freezing Vector OPerations
+always @(*)begin
+    if(Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | Inst_Cache__Stall)
+        freeze_vector_ops = 1'b1;
+    else
+        freeze_vector_ops = 1'b0;
+end
+/*-----------------------------------------------------------------------------------*/
 always @(*) begin
     if (( ((proc_addr_port1 >= `VEC_REG_START_ADDR) && (proc_addr_port1 <= `VEC_REG_END_ADDR)) ||
           ((proc_addr_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_port1 <= `VEC_MEM_END_ADDR)) ) &&

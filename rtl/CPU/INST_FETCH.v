@@ -96,10 +96,10 @@ end
 always @(posedge CLK ) begin
     if(RST) begin
         pc_reg <= 32'b00;
-        vpn_to_ppn_req1 <= 1'b1;
+        //vpn_to_ppn_req1 <= 1'b1;
     end
 	else if(freeze_pulse) begin
-		vpn_to_ppn_req1 <= 1'b1;
+		//vpn_to_ppn_req1 <= 1'b1;
 		if (IF_ID_Freeze)		
 			pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg) ;	//was pc_reg -4 
 		else begin
@@ -111,7 +111,7 @@ always @(posedge CLK ) begin
         end
     else if(~(IF_ID_Freeze || Vector__freeze || (vector_count >= vector_limit))) begin
         pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : pc4;
-        vpn_to_ppn_req1 <= 1'b1;
+        //vpn_to_ppn_req1 <= 1'b1;
         end
 /*    else if(~IF_ID_Freeze) begin
         pc_reg <= (Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : pc4);
@@ -119,14 +119,14 @@ always @(posedge CLK ) begin
     end*/
     else if(PC_Control__IRQ) begin
         pc_reg <=  ISR_ADDRESS;
-        vpn_to_ppn_req1 <= 1'b0;
+        //vpn_to_ppn_req1 <= 1'b0;
     end
-    else begin
-	if (Vector__freeze || (vector_count >= vector_limit))
-        vpn_to_ppn_req1 <= 1'b1;
-	else
-        vpn_to_ppn_req1 <= 1'b0;
-    end
+    //else begin
+	//if (Vector__freeze || (vector_count >= vector_limit) || )
+    //    vpn_to_ppn_req1 <= 1'b1;
+	//else
+    //    vpn_to_ppn_req1 <= 1'b0;
+    //end
 end
 `else
 always @(posedge CLK or posedge RST) begin
@@ -143,6 +143,22 @@ always @(posedge CLK or posedge RST) begin
 end
 `endif
 
+// Define a new process for vpn_to_ppn_req1
+//always @(posedge CLK ) begin
+//    if(RST)
+//        vpn_to_ppn_req1 <= 1'b1;
+//    else if(IF_ID_Freeze)
+//        vpn_to_ppn_req1 <= 1'b0;
+//    else
+//        vpn_to_ppn_req1 <= 1'b1;
+//end
+
+always @(*) begin
+    if (IF_ID_Freeze)
+        vpn_to_ppn_req1 <= 1'b0;
+    else
+        vpn_to_ppn_req1 <= 1'b1;
+end
 
 always @(posedge RST or posedge CLK)
 begin

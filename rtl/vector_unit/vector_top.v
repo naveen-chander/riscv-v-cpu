@@ -199,7 +199,7 @@ vec_decoder VECTOR_DECODER_PRES(
 	.Instruction     (Instruction__IF_ID	 ),
 	.reset			 (reset			         ),
 	.Inst_Cache__Stall(1'b0			         ),
-	.Data_Cache__Stall(freeze_vector	     ),
+	.Data_Cache__Stall(freeze_vector_ops	     ),	//was freeze_vector b4
 	.S_VECn			 (S_VECn				 ),
 	.decode__vs1     (decode_pres__vs1       ),
 	.decode__vs2     (decode_pres__vs2       ),
@@ -223,7 +223,7 @@ vec_decoder VECTOR_DECODER_PRES(
 	.Instruction     (Instruction__ID_EX     ),
 	.reset			 (reset			         ),
 	.Inst_Cache__Stall(1'b0         ),
-	.Data_Cache__Stall(freeze_vector	     ),
+	.Data_Cache__Stall(freeze_vector_ops_delayed ),
 	.S_VECn			 (S_VECn_prev		     ),
 	.decode__vs1     (decode_prev__vs1       ),
 	.decode__vs2     (decode_prev__vs2       ),
@@ -299,7 +299,7 @@ begin
 		release_counter <= 0;
 	else if (v_busy || release_counter == `max_release_count) 
 		release_counter <= 0;
-	else if (DONE && (vec_cycle_counter > `vec_counter_thd))
+	else if (DONE && (vec_cycle_counter > `vec_counter_thd) && (~freeze_vector_ops) )
 		release_counter <= release_counter + 1;
 	
 end
