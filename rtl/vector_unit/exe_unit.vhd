@@ -42,7 +42,11 @@ entity exe_unit is
 		PROC_ADDR   : in  STD_LOGIC_VECTOR(31 downto 0);	-- Adress from CPU to RW VREG/VMEM
 		PROC_DIN    : in  STD_LOGIC_VECTOR(31 downto 0);	-- Write Data
 		PROC_WE		: in  STD_LOGIC;						-- WE
-		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0)		-- Read Data from VREG/VMEM
+		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0);		-- Read Data from VREG/VMEM
+		-----------------------XRF Write INterface---------------------------------------
+		XRF_ADDR    : out STD_LOGIC_VECTOR(4 DOWNTO 0);		-- Address for Writing Scalar OUtputs into XRF
+		XRF_DATAWR  : out STD_LOGIC_VECTOR(31 DOWNTO 0);    -- Scalar Data
+		XRF_WE      : out std_logic
 		   );
 end exe_unit;
 -----------------------------------------------------------------
@@ -56,6 +60,8 @@ architecture Behavioral of exe_unit is
 
 type chain_select is array(0 to 7) of std_logic_vector(2 downto 0);
 type reg_select is array(0 to 7) of std_logic_vector(4 downto 0);
+
+
 
 signal ALU_y            :   ALU_y_signed;
 signal vs1				:   reg_select;
@@ -99,6 +105,7 @@ signal DATA_RD4         :   op_array;
 signal v0_DATA          :   op_array;
 signal LSU_y            :   op_array;
 signal quotient         :   op_array;
+signal y_minmax         :   op_array;
 
 signal ALU_cout         :   done_array;
 signal ALU_overflow     :   done_array;
@@ -174,7 +181,9 @@ signal DMEM_WE_CPU  		: done_array;
 signal REG_DATA_WR_VEC_CPU 	: op_array;
 signal VREG_WE_VEC_CPU		: done_array;
 signal DMEM_ADDR_CPU    	: std_logic_vector(11 downto 0);
-
+-- XRF Interface Related
+signal end_cycle_XRF_Addr : std_logic_vector(8 downto 0);
+signal end_cycle_XRF_DataWR : std_logic_vector(8 downto 0);
 ------------------------------------------------------------
 -- Vector Permutation Related
 --signal scalar_uimm5        : std_logic;
@@ -294,7 +303,7 @@ GEN_ALUs:
 		(
 			op1 	    =>	signed(op1(i)) 	 		, 
 			op2 	    =>	signed(op2(i))  	 	, 
-			op3 	    =>	signed(op3(i)) , 
+			op3 	    =>	signed(op3(i)) 			, 
 			funct	    =>	RD_EXE_Instructions(i).funct(2 downto 0), 
 			cin  	    =>	'0'  					 ,  -- To be added later for supporting adc inst
 			y    	    =>	ALU_y(i)    	 		 , 
@@ -304,6 +313,8 @@ GEN_ALUs:
 		);
 	end generate GEN_ALUs;
 ------------------------------------------------------
+
+
 GEN_DIVIDERs:
 	for i in 0 to 7 generate
 	multicycle_ops_gen:  multicycle_ops generic map(32)
@@ -465,6 +476,135 @@ X_REGS: Xoutreg port map
         WE          =>  Xoutreg_WE
 ); 
 ------------------------------------------------------	
+--VMINMAX_FINDERS  
+------------------------------------------------------
+GEN_VMINMAX:
+	for i in 0 to 7 generate
+		vminmax_gen: vminmax generic map(32) 
+		port map
+			(
+				clk       =>   clk       ,
+				reset     =>   reset     ,
+				clear     =>   I_clear   ,
+				vl 		  =>   vl         ,
+				op2       =>   signed(op2(i)) ,
+				f_minmax  =>   RD_EXE_Instructions(i).funct(7 downto 4)  ,
+				count     =>   RD_EXE_counts(i)     ,	
+				y_minmax  =>   y_minmax(i)  	-- Available in EXE_MEM Stage
+			);
+	end generate GEN_VMINMAX;
+------------------------------------------------------	
+--INterface to Write Scalar Outputs from Vector Unit into Xregs(x0-x31)
+-- Required Signals : XRF_ADDR(4 downto 0), XRF_DATA(31 downto 0), XRF_WE
+end_cycle_XRF_DataWR <= ("000"&RD_EXE_Counts(0) - vl) when (("000"&EXE_MEM_Counts(0)) > vl) else (others=>'0');
+end_cycle_XRF_Addr   <= ("000"&EXE_MEM_Counts(0) -  vl) when (("000"&MEM_WB_Counts(0)) > vl ) else (others=>'0');
+
+XRF_Write_gen: process(clk,reset)
+begin
+	if reset = '1' then
+		XRF_WE <= '0';
+	elsif rising_edge(clk) then
+		if i_clear = '1' then
+			XRF_WE <= '0';
+		else
+			case end_cycle_XRF_DataWR(4 downto 0) is
+				when "00000"	=> XRF_WE <= Instructions(0).Xout;
+				when "00001"	=> XRF_WE <= Instructions(1).Xout;
+				when "00010"	=> XRF_WE <= Instructions(2).Xout;
+				when "00011"	=> XRF_WE <= Instructions(3).Xout;
+				when "00100"	=> XRF_WE <= Instructions(4).Xout;
+				when "00101"	=> XRF_WE <= Instructions(5).Xout;
+				when "00110"	=> XRF_WE <= Instructions(6).Xout;
+				when "00111"	=> XRF_WE <= Instructions(7).Xout;
+				when others => XRF_WE <= '0';
+			end case;
+		end if;
+	end if;
+end process XRF_Write_gen;
+------------------------------------------------------	
+XRF_ADDR_DATA_gen: process(y_minmax, Instructions,end_cycle_XRF_Addr)
+begin
+	case end_cycle_XRF_Addr(4 downto 0) is
+		-----------------------------------------
+		when "00000"		=> 
+			if Instructions(0).Xout = '1' then 
+				XRF_DataWR 	<= y_minmax(0); 	
+				XRF_Addr 	<= Instructions(0).vd; 
+			else
+				XRF_DataWR  <= (others=>'0');
+				XRF_Addr    <= (others=>'0');
+			end if;
+		-----------------------------------------
+		when "00001"	=> 
+			if Instructions(1).Xout = '1' then 
+				XRF_DataWR <= y_minmax(1); 	
+				XRF_Addr   <= Instructions(1).vd;
+			else
+				XRF_DataWR  <= (others=>'0');
+				XRF_Addr    <= (others=>'0');
+			end if;
+		-----------------------------------------
+		when "00010"	=> 
+		if Instructions(2).Xout = '1' then 
+			XRF_DataWR <= y_minmax(2); 	
+			XRF_Addr   <= Instructions(2).vd;
+			else
+			XRF_DataWR  <= (others=>'0');
+			XRF_Addr    <= (others=>'0');
+		end if;
+	-----------------------------------------
+		when "00011"	=> 
+		if Instructions(3).Xout = '1' then 
+			XRF_DataWR <= y_minmax(3); 	
+			XRF_Addr   <= Instructions(3).vd;
+		else
+			XRF_DataWR  <= (others=>'0');
+			XRF_Addr    <= (others=>'0');
+		end if;
+	-----------------------------------------
+		when "00100"	=> 
+		if Instructions(4).Xout = '1' then 
+			XRF_DataWR <= y_minmax(4); 	
+			XRF_Addr   <= Instructions(4).vd;
+		else
+			XRF_DataWR  <= (others=>'0');
+			XRF_Addr    <= (others=>'0');
+		end if;
+	-----------------------------------------	
+		when "00101"	=> 
+			if Instructions(5).Xout = '1' then 
+				XRF_DataWR <= y_minmax(5); 	
+				XRF_Addr   <= Instructions(5).vd;
+			else
+				XRF_DataWR  <= (others=>'0');
+				XRF_Addr    <= (others=>'0');
+			end if;
+		-----------------------------------------	
+		when "00110"	=> 
+			if Instructions(6).Xout = '1' then 
+				XRF_DataWR <= y_minmax(6); 	
+				XRF_Addr   <= Instructions(6).vd;
+			else
+				XRF_DataWR  <= (others=>'0');
+				XRF_Addr    <= (others=>'0');
+		end if;
+	-----------------------------------------
+		when "00111"	=> 
+			if Instructions(7).Xout = '1' then 
+				XRF_DataWR <= y_minmax(7); 	
+				XRF_Addr   <= Instructions(7).vd;
+			else
+				XRF_DataWR  <= (others=>'0');
+				XRF_Addr    <= (others=>'0');
+			end if;
+		-----------------------------------------
+		when others => 
+			XRF_DataWR <= (others=>'0');
+			XRF_Addr    <= (others=>'0');
+	end case;
+end process XRF_ADDR_DATA_gen;
+
+-----------------------------------------------------	
 -- CPU INterface
 VECTOR_CPU_INF: cpu_inf port map(
 		   clk			 => clk			 ,

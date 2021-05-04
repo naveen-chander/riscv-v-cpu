@@ -36,8 +36,15 @@
 `define funct6__vnmsac	 		6'b101111
 `define funct6__vredsum	 		6'b000000	// Same as vadd!
 `define funct6__vdot	 		6'b111001	// Dot Product
-`define funct6__vrelu	 		6'b001001	// Dot Product
-
+`define funct6__vrelu	 		6'b001001	// vand ReLu
+`define funct6__vmaxval     	6'b000001	// vredand --> IMplements vmaxval
+`define funct6__vmaxuval    	6'b000010	// vredor 
+`define funct6__vminval     	6'b000011   //vredxor
+`define funct6__vminuval    	6'b001000   //vaaddu
+`define funct6__vmaxidx 		6'b000111    
+`define funct6__vmaxuidx    	6'b000110
+`define funct6__vminidx     	6'b000101
+`define funct6__vminuidx    	6'b000100
 
 `define funct3__OPIVV	 		3'b000		// Integer Vector-Vector
 `define funct3__OPMVV	 		3'b010		// Integer Mask -Vector ?
@@ -206,21 +213,29 @@ always @(*) begin
 		
 		if 	(opcode == `OP_VEC_ARITH)
 		case(funct6)
-			`funct6__vadd 			: decode__funct <= 4'b0;
-			`funct6__vsub 			: decode__funct <= 4'b0;	//Yet to be implemented	
-			`funct6__vslidedown 	: decode__funct <= 4'b0;	
-			`funct6__vdiv 		    : decode__funct <= 4'b1000;
-			`funct6__vmulhu 		: decode__funct <= 4'b0100;
-			`funct6__vmul 		    : decode__funct <= 4'b0001;
-			`funct6__vmulhsu 	    : decode__funct <= 4'b0010;
-			`funct6__vmulh	 	    : decode__funct <= 4'b0010;
-			`funct6__vmadd	 	    : decode__funct <= 4'b0000;	// Yet to be implemented
-			`funct6__vnmsub	 	    : decode__funct <= 4'b0000; //Yet to be implemented
-			`funct6__vmacc	 	    : decode__funct <= 4'b0011;
-			`funct6__vnmsac	 	    : decode__funct <= 4'b0100;
-			`funct6__vdot			: decode__funct <= 4'b0011;	// Same as MACC
-			`funct6__vrelu			: decode__funct <= 4'b0101;	// ReLu Instruction
-			default 				: decode__funct <= 4'b0000;  //vadd
+			`funct6__vadd 			: decode__funct <= 8'b00000000;
+			`funct6__vsub 			: decode__funct <= 8'b00000000;	//Yet to be implemented	
+			`funct6__vslidedown 	: decode__funct <= 8'b00000000;	
+			`funct6__vdiv 		    : decode__funct <= 8'b00001000;
+			`funct6__vmulhu 		: decode__funct <= 8'b00000100;
+			`funct6__vmul 		    : decode__funct <= 8'b00000001;
+			`funct6__vmulhsu 	    : decode__funct <= 8'b00000010;
+			`funct6__vmulh	 	    : decode__funct <= 8'b00000010;
+			`funct6__vmadd	 	    : decode__funct <= 8'b00000000;	// Yet to be implemented
+			`funct6__vnmsub	 	    : decode__funct <= 8'b00000000; //Yet to be implemented
+			`funct6__vmacc	 	    : decode__funct <= 8'b00000011;
+			`funct6__vnmsac	 	    : decode__funct <= 8'b00000100;
+			`funct6__vdot			: decode__funct <= 8'b00000011;	// Same as MACC
+			`funct6__vrelu			: decode__funct <= 8'b00000101;	// ReLu Instruction
+			`funct6__vmaxval        : decode__funct <= 8'b10000000; //
+			`funct6__vmaxuval       : decode__funct <= 8'b10010000; //
+			`funct6__vminval        : decode__funct <= 8'b10100000; //
+			`funct6__vminuval       : decode__funct <= 8'b10110000; //
+			`funct6__vmaxidx        : decode__funct <= 8'b11000000; //
+			`funct6__vmaxuidx       : decode__funct <= 8'b11010000; //
+			`funct6__vminidx        : decode__funct <= 8'b11100000; //
+			`funct6__vminuidx       : decode__funct <= 8'b11110000; //
+			default 				: decode__funct <= 8'b00000000;  //vadd
 		endcase
 		decode__permute <= ( (opcode == `OP_VEC_ARITH) && (funct6 ==`funct6__vslidedown) ) ? 2'b01 : 0;	//Fix to slide1down
 		decode__mask_en <= vector_mask;
@@ -243,9 +258,13 @@ always @(*) begin
 		decode__mode_lsu<= ((opcode == `OP_VEC_LOAD))  ? Instruction[27:26] :1'b0;
 		//--- Vector Instructions with Scalar outputs
 		if (opcode == `OP_VEC_ARITH) begin
-			if ( ((funct6 == `funct6__vdot) && ((funct3 == `funct3__OPIVV)||(funct3 == `funct3__OPMVX))) |
-				 (funct6 == `funct6__vredsum &&   (funct3 == `funct3__OPMVV) )
-				)		//Only for vredsum and vdot as of now
+			if ( ((funct6 == `funct6__vdot) && ((funct3 == `funct3__OPIVV)||(funct3 == `funct3__OPMVX))) ||
+				 //((funct6 == `funct6__vredsum )  &&   (funct3 == `funct3__OPIVV) ) |
+				 ((funct6 == `funct6__vmaxidx )  &&   (funct3 == `funct3__OPIVV) ) ||
+				 ((funct6 == `funct6__vmaxuidx)   &&  (funct3 == `funct3__OPIVV) ) ||
+				 ((funct6 == `funct6__vminidx )  &&   (funct3 == `funct3__OPIVV) ) ||
+				 ((funct6 == `funct6__vminuidx)   &&  (funct3 == `funct3__OPIVV) ) 
+				)		//Only for vredsum,vdot,vmax_min
 				decode__Xout <= 1;
 			end
 			else

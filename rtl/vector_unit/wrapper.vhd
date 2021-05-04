@@ -43,7 +43,7 @@ port(
 	I_RS1    		: in std_logic_vector(31 downto 0);
 	I_RS2    		: in std_logic_vector(31 downto 0);
 	I_uimm5    		: in std_logic_vector(4 downto 0);
-	I_funct   		: in std_logic_vector(3 downto 0);
+	I_funct   		: in std_logic_vector(7 downto 0);
 	I_permute   	: in std_logic_vector(1 downto 0);
 	I_mask_en 		: in std_logic;
 	I_ALUSrc  		: in std_logic_vector(1 downto 0);
@@ -58,7 +58,11 @@ port(
 	PROC_ADDR		: in  std_logic_vector(31 downto 0);
 	PROC_DIN		: in  std_logic_vector(31 downto 0);
 	PROC_WE			: in  std_logic;
-	PROC_DOUT		: out std_logic_vector(31 downto 0)
+	PROC_DOUT		: out std_logic_vector(31 downto 0);
+	-----------------------------------------------------
+	XRF_ADDR    : out STD_LOGIC_VECTOR(4 DOWNTO 0);		-- Address for Writing Scalar OUtputs into XRF
+	XRF_DATAWR  : out STD_LOGIC_VECTOR(31 DOWNTO 0);    -- Scalar Data
+	XRF_WE      : out std_logic
 	
 );
 
@@ -80,7 +84,11 @@ component exe_unit is
 		PROC_ADDR   : in  STD_LOGIC_VECTOR(31 downto 0);	-- Adress from CPU to RW VREG/VMEM
 		PROC_DIN    : in  STD_LOGIC_VECTOR(31 downto 0);	-- Write Data
 		PROC_WE		: in  STD_LOGIC;						-- WE
-		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0)		-- Read Data from VREG/VMEM
+		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0);		-- Read Data from VREG/VMEM
+		-----------------------------------------------------
+		XRF_ADDR    : out STD_LOGIC_VECTOR(4 DOWNTO 0);		-- Address for Writing Scalar OUtputs into XRF
+		XRF_DATAWR  : out STD_LOGIC_VECTOR(31 DOWNTO 0);    -- Scalar Data
+		XRF_WE      : out std_logic
 		   );
 end component;
 
@@ -117,7 +125,11 @@ VECTOR_EXE_UNIT_PIPE: exe_unit port map(
 	PROC_ADDR				=> PROC_ADDR		,
 	PROC_DIN				=> PROC_DIN			,
 	PROC_WE					=> PROC_WE			,
-	PROC_DOUT				=> PROC_DOUT		
+	PROC_DOUT				=> PROC_DOUT		,
+	--------------------------------------------------
+	XRF_ADDR    			=> XRF_ADDR   		,
+	XRF_DATAWR  			=> XRF_DATAWR 		,
+	XRF_WE      			=> XRF_WE     		
 	);
 	
 end Behavioral;

@@ -30,7 +30,6 @@ use IEEE.STD_LOGIC_1164.ALL;
 -- any Xilinx leaf cells in this code.
 --library UNISIM;
 --use UNISIM.VComponents.all;
-
 entity stall_gen is
     Port ( 
     clk         	: in STD_LOGIC;

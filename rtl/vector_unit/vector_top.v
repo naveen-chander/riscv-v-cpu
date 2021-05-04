@@ -53,7 +53,11 @@ module vector_top(
 	output reg [1:0]	release_counter,
     output reg [4:0]  	rs2_sel,
     output reg [4:0]  	rs1_sel,
-	output wire			ALU_monitor
+	output wire			ALU_monitor,
+	//XRF INterface
+	output [4:0]	XRF_ADDR		,
+	output [31:0]	XRF_DATAWR		,
+	output  wire    XRF_WE			
     );
 ///////////////////////////////////////////////	
 // Define REGs and WIREs
@@ -73,7 +77,7 @@ reg [4:0]		I_vd      	;		// Vector Destination Register vd of ith instruction
 reg [31:0]		I_RS1    	;		// Scalar Source Register RS1 of ith instruction
 reg [31:0]		I_RS2    	;		// Scalar Source Register RS2 of ith instruction
 reg [4:0]		I_uimm5    	;		// Unsigned 5-bit Immediate Value of ith instruction
-reg [3:0]		I_funct   	;		// Vector Operation
+reg [7:0]		I_funct   	;		// Vector Operation
 reg [1:0]		I_permute   ;		// Vector Slide down coefficient (0--3) for ith instruction
 reg 			I_mask_en 	;		// Control Signal to enable Vector Mask for ith instruction
 reg [1:0]		I_ALUSrc  	;		// ALU Source > vs(=00) / rs(=01) / uimm5(=11)
@@ -109,7 +113,7 @@ reg [4:0]	vd      	[`nLANES-1:0];
 reg [4:0]	RS1    		[`nLANES-1:0];
 reg [4:0]	RS2    		[`nLANES-1:0];
 reg [4:0]	uimm5    	[`nLANES-1:0];
-reg [3:0]	funct   	[`nLANES-1:0];
+reg [7:0]	funct   	[`nLANES-1:0];
 reg [1:0]	permute   	[`nLANES-1:0];
 reg 		mask_en 	[`nLANES-1:0];
 reg [1:0]	ALUSrc  	[`nLANES-1:0];
@@ -259,6 +263,9 @@ v_wrapper  VEC_EXE_UNIT(
 	.proc_din		(proc_din	),
 	.proc_dout		(proc_dout	),
 	.proc_we		(proc_we	),
+	.XRF_ADDR		(XRF_ADDR	),
+	.XRF_DATAWR		(XRF_DATAWR ),
+	.XRF_WE	        (XRF_WE 	),
 	.I_start   		(I_start   	),
 	.I_vs1     		(I_vs1     	),
 	.I_vs2     		(I_vs2     	),

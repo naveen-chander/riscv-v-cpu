@@ -43,6 +43,7 @@ port(
 	);
 end lsu;
 
+
 architecture Behavioral of lsu is
 type dmem_bank_select is array(0 to 7) of std_logic_vector(2 downto 0);
 

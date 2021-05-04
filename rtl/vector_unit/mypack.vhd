@@ -38,7 +38,7 @@ type i_rec is record
 	RS1     : std_logic_vector(31 downto 0);      -- Scalar Register Contents read from XRF-rs1
 	RS2     : std_logic_vector(31 downto 0);      -- Scalar Register Contents read from XRF-rs2
 	uimm5   : std_logic_vector(4 downto 0);       -- 5-bit immediate {Implemented as Unsigned ONLY}
-	funct   : std_logic_vector(3 downto 0);       -- Vector Operation Selector
+	funct   : std_logic_vector(7 downto 0);       -- Vector Operation Selector
 	permute : std_logic_vector(1 downto 0);       -- MAgnitude of Vector Slidedown
 	mask_en : std_logic;                          -- Vector Mask Enable
 	ALUSrc  : std_logic_vector(1 downto 0);       -- ALU-OP1 Source == VecREG : 00 | XREG : 01 | Immediate : 11 
@@ -126,17 +126,17 @@ end component;
 --------------------------------------------------------------------
 component alu is
 generic(width : integer :=32);
-    Port ( op1 : in signed (width-1 downto 0);
-           op2 : in signed (width-1 downto 0);
-           op3 : in signed (width-1 downto 0);
-		       funct: in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
-           cin  : in STD_LOGIC;
-           y    : out signed(width-1 downto 0);
-           cout : out std_logic;
-           overflow : out std_logic;
-           underflow : out std_logic
-           );
-end component;
+port(op1       : in signed (width-1 downto 0);
+    op2       : in signed (width-1 downto 0);
+    op3       : in signed (width-1 downto 0);
+    funct     : in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
+    cin       : in STD_LOGIC;
+    y         : out signed(width-1 downto 0);
+    cout      : out std_logic;
+    overflow  : out std_logic;
+    underflow : out std_logic
+  );
+  end component;
 -----------------------------------------------------------------
 
 component xoutreg is
@@ -148,6 +148,20 @@ component xoutreg is
       WE          : in  done_array
   );
 end component;
+-----------------------------------------------------------------
+component vminmax is
+  generic(width : integer :=32);
+  Port (
+      clk       : in std_logic;
+      reset     : in std_logic;
+      clear     : in std_logic;
+      vl        : in std_logic_vector(8 downto 0);
+      op2       : in signed (width-1 downto 0);
+      f_minmax  : in std_logic_vector(3 downto 0); -- max_min function  
+      count     : in std_logic_vector(5 downto 0); -- Vector element index
+      y_minmax  : out std_logic_vector(width-1 downto 0)
+   );
+  end component;
 -----------------------------------------------------------------
 component multicycle_ops is
 generic(width : integer :=32);
