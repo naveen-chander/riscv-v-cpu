@@ -103,10 +103,12 @@ always @(posedge CLK ) begin
 		if (IF_ID_Freeze)		
 			pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg) ;	//was pc_reg -4 
 		else begin
-			if (vector_count == 6) 
+			if (vector_count == (vector_limit+1)) 
 				pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd8) ;
+			else if (vector_count == (vector_limit+2))
+				pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd4) ;	
 			else
-				pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd8) ;	
+            	pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd12) ;	
 			end
         end
     else if(~(IF_ID_Freeze || Vector__freeze || (vector_count >= vector_limit))) begin
@@ -135,7 +137,7 @@ always @(posedge CLK or posedge RST) begin
     end
     else begin
 		if(freeze_pulse)
-			pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd8) ;
+			pc_reg <= Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (pc_reg - 32'd12) ;
         else if(~(IF_ID_Freeze || Vector__freeze)) begin
             pc_reg <= (Branch_Taken__EX_MEM ? Branch_Target_Addr__EX_MEM : (Load__Stall ? (pc_reg - 32'd4) : pc4));
         end
