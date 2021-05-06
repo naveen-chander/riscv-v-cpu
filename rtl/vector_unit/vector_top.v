@@ -55,6 +55,7 @@ module vector_top(
     output reg [4:0]  	rs1_sel,
 	output wire			ALU_monitor,
 	//XRF INterface
+	output  wire    vec_wr_XRF,
 	output [4:0]	XRF_ADDR		,
 	output [31:0]	XRF_DATAWR		,
 	output  wire    XRF_WE			
@@ -132,7 +133,7 @@ wire [4:0]	decode_prev__vd      ;
 wire [4:0]	decode_prev__RS1     ;
 wire [4:0]	decode_prev__RS2     ;
 wire [4:0]	decode_prev__uimm5   ;
-wire [3:0]	decode_prev__funct   ;
+wire [7:0]	decode_prev__funct   ;
 wire [1:0]	decode_prev__permute ;
 wire 		decode_prev__mask_en ;
 wire [1:0]	decode_prev__ALUSrc  ;
@@ -149,7 +150,7 @@ wire [4:0]	decode_pres__vd      ;
 wire [4:0]	decode_pres__RS1     ;
 wire [4:0]	decode_pres__RS2     ;
 wire [4:0]	decode_pres__uimm5   ;
-wire [3:0]	decode_pres__funct   ;
+wire [7:0]	decode_pres__funct   ;
 wire [1:0]	decode_pres__permute ;
 wire 		decode_pres__mask_en ;
 wire [1:0]	decode_pres__ALUSrc  ;
@@ -166,7 +167,7 @@ reg  [4:0]	decode__vd      ;
 reg  [4:0]	decode__RS1     ;
 reg  [4:0]	decode__RS2     ;
 reg  [4:0]	decode__uimm5   ;
-reg  [3:0]	decode__funct   ;
+reg  [7:0]	decode__funct   ;
 reg  [1:0]	decode__permute ;
 reg  		decode__mask_en ;
 reg  [1:0]	decode__ALUSrc  ;
@@ -196,6 +197,7 @@ assign opcode = Instruction__IF_ID[6:0];
 assign freeze = freeze_v | freeze_x;
 assign vec_decoder_disable = (release_counter == 0) ? (freeze_vector ? 1'b1 : 1'b0) : 1'b0;  
 assign ALU_monitor = ALU_mon;
+assign vec_wr_XRF = ~DONE;
 ///////////////////////////////////////////////
 ///// Instantiate Vector Decoder Module     ///
 ///////////////////////////////////////////////
@@ -359,7 +361,7 @@ end
 always @(posedge reset or posedge clk) begin
 	if(reset) begin
 		freeze_thd <= `nLANES-2; // Scalar followed by Vector
-		sv_vv <= 1'b0;	// ID_EX Stage Input
+		sv_vv <= 1'b1;	// ID_EX Stage Input
 		end
 	else if (v_busy && ~S_VECn)
 		if (S_VECn_prev) begin
@@ -367,8 +369,8 @@ always @(posedge reset or posedge clk) begin
 			sv_vv = 1'b1;
 			end
 		else begin
-			freeze_thd <= `nLANES;	//Vector-Vector Case
-			sv_vv <= 1'b0;
+			freeze_thd <= `nLANES-1;	//Vector-Vector Case
+			sv_vv <= 1'b1;
 			end
 end	
 

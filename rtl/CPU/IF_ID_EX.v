@@ -173,7 +173,7 @@ wire FP__Store_Inst__id_ex;
 wire sv_vv;		//Scalar Vector or vector vector
 reg  proc_vec_mem_we;
 reg Vector__Stall_reg;
-
+wire vec_wr_XRF;        // Allows Vector Unit to write to XRF
 
 reg  [4:0] FP__RD_Addr__ID_EX;
 reg  FP__Reg_Write_En__ID_EX;
@@ -955,6 +955,7 @@ vector_top VECTOR_UNIT(
 			.rs2_sel                (vector_unit_rs2_sel    ),
 			.rs1_sel                (vector_unit_rs1_sel    ),
 			.ALU_monitor            (ALU_monitor            ),
+            .vec_wr_XRF             (vec_wr_XRF             ),
             .XRF_ADDR               (XRF_ADDR_VEC_UNIT      ),
             .XRF_DATAWR             (XRF_DATAWR_VEC_UNIT      ),
             .XRF_WE                 (XRF_WE_VEC_UNIT        )
@@ -1167,9 +1168,9 @@ REG_FILE RF( .CLK(CLK),
              .RST(RST),
              .RS1_Read_Addr(FP__RS1_read_Int__rf ? FP__RS1_Addr_Int__rf : Vector__Stall ? vector_unit_rs1_sel : RS1_Addr__rf), 
              .RS2_Read_Addr(Vector__Stall ? vector_unit_rs2_sel : RS2_Addr__rf),
-             .RD_Write_Addr(Vector__Stall_reg ? XRF_ADDR_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__RD_Addr_Int__EX_MEM : RD_Addr__EX_MEM),
-             .RD_Write_Data(Vector__Stall_reg ? XRF_DATAWR_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__RD_Data_Int__EX_MEM : RD_Data__mem_wb),
-             .Reg_Write_Enable__EX_MEM(Vector__Stall_reg ? XRF_WE_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__Reg_Write_En_Int__EX_MEM : Reg_Write_Enable__EX_MEM),
+             .RD_Write_Addr(vec_wr_XRF ? XRF_ADDR_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__RD_Addr_Int__EX_MEM : RD_Addr__EX_MEM),
+             .RD_Write_Data(vec_wr_XRF ? XRF_DATAWR_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__RD_Data_Int__EX_MEM : RD_Data__mem_wb),
+             .Reg_Write_Enable__EX_MEM(vec_wr_XRF ? XRF_WE_VEC_UNIT : FP__Reg_Write_En_Int__EX_MEM ? FP__Reg_Write_En_Int__EX_MEM : Reg_Write_Enable__EX_MEM),
              .MEM_WB_Freeze(Data_Cache__Stall | Double_Load_Store__Stall_reg),
              .RS1_Dec_Ctrl__IRQ(irq_ctrl_dec_src1),
              .RS2_Dec_Ctrl__IRQ(irq_ctrl_dec_src2),

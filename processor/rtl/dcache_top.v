@@ -277,8 +277,9 @@ always @(posedge clk ) begin
 end
 
 always @(*) begin
-    if ((proc_addr_in_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_in_port1 <= `VEC_MEM_END_ADDR)||
-        (proc_addr_in_port1 >= `VEC_REG_START_ADDR) && (proc_addr_in_port1 <= `VEC_REG_END_ADDR) )
+    if ( ((proc_addr_in_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_in_port1 <= `VEC_MEM_END_ADDR)||
+         (proc_addr_in_port1 >= `VEC_REG_START_ADDR) && (proc_addr_in_port1 <= `VEC_REG_END_ADDR) ) &&
+        (lsu_op_port1 === 5'b01001 || lsu_op_port1 == 5'b01010))
         non_cacheable <= 1'b1;
     else
         non_cacheable <= 1'b0;

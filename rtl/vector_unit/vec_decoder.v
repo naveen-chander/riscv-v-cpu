@@ -128,7 +128,7 @@ module vec_decoder(
 	output reg [4:0]	decode__RS1     ,
 	output reg [4:0]	decode__RS2     ,
 	output reg [4:0]	decode__uimm5   ,
-	output reg [3:0]	decode__funct   ,
+	output reg [7:0]	decode__funct   ,
 	output reg [1:0]	decode__permute ,
 	output reg 			decode__mask_en ,
 	output reg [1:0]	decode__ALUSrc  ,

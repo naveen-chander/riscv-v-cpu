@@ -87,7 +87,7 @@ begin
 		when "010"	=> temp <= '0'&prod_h;
 		when "011"	=> temp <= mac;
 		when "100"	=> temp <= msac;
-		when "101"  => --ReLu Function
+		when "101"  => --ReLu Function  
 			if op2_int > 0 then
 				temp <= op2_int;
 			else
