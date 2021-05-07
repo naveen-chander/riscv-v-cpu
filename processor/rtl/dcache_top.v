@@ -210,7 +210,6 @@ wire  addr_exception_port2;
 
 wire tag_hit_tlb_port1;
 wire tag_hit_tlb_port2;
-reg non_cacheable;
 
 assign addr_exception = addr_exception_port1 || addr_exception_port2 ;
 
@@ -276,14 +275,7 @@ always @(posedge clk ) begin
     end
 end
 
-always @(*) begin
-    if ( ((proc_addr_in_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_in_port1 <= `VEC_MEM_END_ADDR)||
-         (proc_addr_in_port1 >= `VEC_REG_START_ADDR) && (proc_addr_in_port1 <= `VEC_REG_END_ADDR) ) &&
-        (lsu_op_port1 === 5'b01001 || lsu_op_port1 == 5'b01010))
-        non_cacheable <= 1'b1;
-    else
-        non_cacheable <= 1'b0;
-end
+
 
 
 
@@ -663,7 +655,6 @@ dcache_ram_fsm drf0( .clk(clk),
                      .bus_rdy(bus_rdy_int1),
                      .bus_data(bus_data),
                      .bus_addr(bus_addr_int1),
-                     .non_cacheable(non_cacheable),
                      .hit(hit_a),
                      .mis(mis_a),
                      .bus_re(bus_re_int1),
@@ -731,7 +722,6 @@ dcache_ram_fsm drf1( .clk(clk),
                      .mis(mis_b),
                      .bus_re(bus_re_int2),
                      .bus_we(bus_we_int2),
-                     .non_cacheable(non_cacheable),
                      .Load_Store_op(lsu_op_port2_int),
                      .Load_Data(proc_data_port2_int),
                      .MEM_Addr(proc_addr_in_port2_int),

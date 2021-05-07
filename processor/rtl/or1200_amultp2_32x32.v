@@ -2509,6 +2509,7 @@ end
    uint <= A_32 + signadd;
    signadd <= P[63] ? (~(P) + 1) : P;
    result_mul <= (mul_op_fsm[1] | mul_op_fsm[0]) ? P_int[63:32] : P_int[31:0];
+   //result_mul <= (mul_op_fsm[1] | mul_op_fsm[0]) ? P_int[63:32] : P_int[55:24];
    end
 //   assign uint = (A_32 + B_32);
    assign A_32 = {1'b0,{X[31:0]},31'b0};

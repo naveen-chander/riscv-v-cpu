@@ -8,8 +8,8 @@ module IF_ID_EX
     
     
     
-    output [4:0] Load_Store_Op__Port1,                          //memory stage operation signals to lsu
-    output reg [31:0] proc_addr_port1,                  //to memory stage
+    output [4:0] Load_Store_Op__Port1,      //memory stage operation signals to lsu : Vector Memory accesses will invalidate this
+    output reg [31:0] proc_addr_port1,      //to memory stage 
     output [31:0] Store_Data,                       //data to be stored(only used for memory stage)
     output lsustall_o,                                  //mem stage Load__Stall
     output reg Load__Stall,
@@ -174,6 +174,9 @@ wire sv_vv;		//Scalar Vector or vector vector
 reg  proc_vec_mem_we;
 reg Vector__Stall_reg;
 wire vec_wr_XRF;        // Allows Vector Unit to write to XRF
+reg monitor;
+reg [4:0] Load_Store_op_reg;
+reg non_cacheable_reg;
 
 reg  [4:0] FP__RD_Addr__ID_EX;
 reg  FP__Reg_Write_En__ID_EX;
@@ -365,6 +368,8 @@ reg  [31:0] Instruction__ID_EX;	// For Vector unit
 wire [4:0] XRF_ADDR_VEC_UNIT;
 wire [31:0] XRF_DATAWR_VEC_UNIT;
 wire XRF_WE_VEC_UNIT;
+reg non_cacheable;
+reg non_cacheable_reg;
 
 assign Inst_Cache_Freeze = (Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | irq_icache_freeze | Double_Load_Store__Stall| Vector_freeze_PC) ;
 
@@ -384,7 +389,7 @@ assign Store_Data = Double_Load_Store__Stall_reg ? Double_Store_Buffer : (FP__St
 
 assign SC_Inst = SC_Inst__ex_mem;
 
-assign Load_Store_Op__Port1 = Load_Store_Op__ex_mem;
+assign Load_Store_Op__Port1 = non_cacheable ? 5'b0 : Load_Store_Op__ex_mem ;  // Accesses to Vector Memory will invalidate this
 
 
 
@@ -899,7 +904,7 @@ DECODE ID( .CLK(CLK),
 //    		    Mtech Microelectronics and VLSI Design
 //-------------------------------------------------------------
 // freeze signal for stalling vector unit
-reg monitor;
+
 /*-----------------------------------------------------------------------------------*/
 // Logic for freezing Vector OPerations
 always @(*)begin
@@ -909,6 +914,16 @@ always @(*)begin
         freeze_vector_ops = 1'b0;
 end
 /*-----------------------------------------------------------------------------------*/
+always @(*) begin
+    if ( ((proc_addr_port1 >= `VEC_MEM_START_ADDR) && (proc_addr_port1 <= `VEC_MEM_END_ADDR)||
+         (proc_addr_port1 >= `VEC_REG_START_ADDR) && (proc_addr_port1 <= `VEC_REG_END_ADDR) ) &&
+        (Load_Store_Op__ex_mem === 5'b01001 || Load_Store_Op__ex_mem == 5'b01010))
+        non_cacheable <= 1'b1;
+    else
+        non_cacheable <= 1'b0;
+end
+/*-----------------------------------------------------------------------------------*/
+
 /*-----------------------------------------------------------------------------------*/
 always @(*) begin
     if (( ((proc_addr_port1 >= `VEC_REG_START_ADDR) && (proc_addr_port1 <= `VEC_REG_END_ADDR)) ||
@@ -919,9 +934,7 @@ always @(*) begin
         proc_vec_mem_we <= 1'b0;
 end
 always @(*) begin
-    if((  ((proc_addr_port1_EX_MEM >= `VEC_REG_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_REG_END_ADDR))||
-          ((proc_addr_port1_EX_MEM >= `VEC_MEM_START_ADDR) && (proc_addr_port1_EX_MEM <= `VEC_MEM_END_ADDR)) ) &&
-        (Load_Store_Op__EX_MEM == 5'b01001)) begin
+    if( (non_cacheable_reg == 1'b1) && (Load_Store_op_reg == 5'b01001) ) begin
         dmem_read_data <= vector_mem_data;
         monitor <=1'b1;
         end
@@ -968,10 +981,14 @@ always @(posedge CLK ) begin
     if(RST) begin
         Instruction__ID_EX <= 32'b0;
         Vector__Stall_reg <= 1'b0;
+        non_cacheable_reg <= 1'b0;
+        Load_Store_op_reg <= 5'b0;
     end
     else  begin 
         Instruction__ID_EX <= Instruction__IF_ID;
         Vector__Stall_reg <= Vector__Stall;
+        non_cacheable_reg <= non_cacheable;
+        Load_Store_op_reg <= Load_Store_Op__ex_mem;     // Note : It may not be the same as Load_Store_Op__EX_MEM
     end 
 end
 //----------------------------------------------------
