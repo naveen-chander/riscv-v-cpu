@@ -245,13 +245,13 @@ end
 
 assign resultsltu = (indata1 < indata2) ? {{31'b0},{1'b1}} : 32'h0;
 assign resultslt = ($signed(indata1) < $signed(indata2))? {{31'b0},{1'b1}}: 32'h0;
-assign addout = ((indata1) + (( (Opcode__ID_EX == `op32_alu) & (Funct7__ID_EX == `func_sub)) ? (~(indata2)+1) : indata2)); //select subtraction operation if it is an adder operation and the func7 is 0700000
+assign addout = ((indata1) + (( ((Opcode__ID_EX == `op32_alu)||(Opcode__ID_EX == `op64_alu)) & (Funct7__ID_EX == `func_sub)) ? (~(indata2)+1) : indata2)); //select subtraction operation if it is an adder operation and the func7 is 0700000
 assign xorout = indata1^indata2;
 assign orout = indata1 | indata2;
 assign andout = indata1 & indata2;
-assign sll = indata1 << ((Opcode__ID_EX == `op32_imm_alu) ? shamt_int : indata2[5:0]);
-assign srl = indata1 >> ((Opcode__ID_EX == `op32_imm_alu) ? shamt_int : indata2[5:0]);
-assign sra = $signed(indata1) >>> ((Opcode__ID_EX == `op32_imm_alu) ? shamt_int : indata2[5:0]);
+assign sll = indata1 <<( ((Opcode__ID_EX == `op32_imm_alu)||((Opcode__ID_EX == `op64_imm_alu))) ? shamt_int : indata2[5:0]);
+assign srl = indata1 >>( ((Opcode__ID_EX == `op32_imm_alu)||((Opcode__ID_EX == `op64_imm_alu))) ? shamt_int : indata2[5:0]);
+assign sra = $signed(indata1) >>> ( ((Opcode__ID_EX == `op32_imm_alu)||((Opcode__ID_EX == `op64_imm_alu))) ? shamt_int : indata2[5:0]);
 assign adderout = addout;
 
 assign trap_en = 1'b0;
@@ -289,18 +289,27 @@ always @(*) begin
         {{7'b???????},{3'b???},{`op32_loadop}}:                 result_int <= adderout;
         {{7'b???????},{3'b???},{`op32_storeop}}:                result_int <= adderout;
         {{7'b???????},{`alu_addsub},{`op32_imm_alu}}:           result_int <= adderout;
-        {{7'b0000000},{`alu_addsub},{`op32_alu}}:               result_int <= adderout;
-        {{7'b0100000},{`alu_addsub},{`op32_alu}}:               result_int <= adderout;
+        {{7'b???????},{`alu_addsub},{`op64_imm_alu}}:           result_int <= adderout;
+        {{7'b0000000},{`alu_addsub},{`op32_alu}}:               result_int <= adderout; //ADD
+        {{7'b0100000},{`alu_addsub},{`op32_alu}}:               result_int <= adderout; //SUB
+        {{7'b0000000},{`alu_addsub},{`op64_alu}}:               result_int <= adderout; //ADDW
+        {{7'b0100000},{`alu_addsub},{`op64_alu}}:               result_int <= adderout; //SUBW
         {{7'b???????},{`alu_slt},{`op32_imm_alu}}:              result_int <= resultslt;
         {{7'b0000000},{`alu_slt},{`op32_alu}}:                  result_int <= resultslt;
         {{7'b???????},{`alu_sltu},{`op32_imm_alu}}:             result_int <= resultsltu;
         {{7'b0000000},{`alu_sltu},{`op32_alu}}:                 result_int <= resultsltu;
         {{7'b0000000},{`alu_sll},{`op32_imm_alu}}:              result_int <= sllout;
+        {{7'b0000000},{`alu_sll},{`op64_imm_alu}}:              result_int <= sllout;
         {{7'b0000000},{`alu_sll},{`op32_alu}}:                  result_int <= sllout;
+        {{7'b0000000},{`alu_sll},{`op64_alu}}:                  result_int <= sllout;
         {{7'b0000000},{`alu_srlsra},{`op32_imm_alu}}:           result_int <= srlout;
+        {{7'b0000000},{`alu_srlsra},{`op64_imm_alu}}:           result_int <= srlout;
         {{7'b0000000},{`alu_srlsra},{`op32_alu}}:               result_int <= srlout;
+        {{7'b0000000},{`alu_srlsra},{`op64_alu}}:               result_int <= srlout;
         {{7'b0100000},{`alu_srlsra},{`op32_imm_alu}}:           result_int <= sraout;
+        {{7'b0100000},{`alu_srlsra},{`op64_imm_alu}}:           result_int <= sraout;
         {{7'b0100000},{`alu_srlsra},{`op32_alu}}:               result_int <= sraout;
+        {{7'b0100000},{`alu_srlsra},{`op64_alu}}:               result_int <= sraout;
         {{7'b???????},{`alu_or},{`op32_imm_alu}}:               result_int <= orout;
         {{7'b0000000},{`alu_or},{`op32_alu}}:                   result_int <= orout;
         {{7'b???????},{`alu_xor},{`op32_imm_alu}}:              result_int <= xorout;

@@ -208,7 +208,7 @@ assign amo = (inst[6:0] == `amo);
 //computation of shift register inputs 
 assign rd = ((inst[6:0] == `op32_branch) | (inst[6:0] == `op32_storeop)) ? 5'b0 : inst[11:7];
 assign rs1 = ((inst[6:0] == `op_lui) | (inst[6:0] == `op_auipc) | (inst[6:0] == `jal)) ? 5'b0 : inst[19:15];
-assign rs2 = ((inst[6:0] == `op32_branch) | (inst[6:0] == `op32_storeop) | (inst[6:0] == `op32_alu) | (inst[6:0] == `op32_alu) | (inst[6:0] == `amo)) ? inst[24:20] : 5'b0;
+assign rs2 = ((inst[6:0] == `op32_branch) | (inst[6:0] == `op32_storeop) | (inst[6:0] == `op32_alu) | (inst[6:0] == `op64_alu) | (inst[6:0] == `amo)) ? inst[24:20] : 5'b0;
 
 
 
@@ -387,7 +387,15 @@ always @(*) begin
                 Alu_Src_1_sel__id_ex <= 2'b00;                      //select rs1 as input
                 Alu_Src_2_sel__id_ex <= 2'b10;                      //select immediate as input
             end
+            `op64_imm_alu: begin
+                Alu_Src_1_sel__id_ex <= 2'b00;                      //select rs1 as input
+                Alu_Src_2_sel__id_ex <= 2'b10;                      //select immediate as input
+            end
             `op32_alu: begin
+                Alu_Src_1_sel__id_ex <= 2'b00;                      //select rs1 as input
+                Alu_Src_2_sel__id_ex <= 2'b00;                      //select rs2 as input
+            end     
+            `op64_alu: begin
                 Alu_Src_1_sel__id_ex <= 2'b00;                      //select rs1 as input
                 Alu_Src_2_sel__id_ex <= 2'b00;                      //select rs2 as input
             end     
@@ -450,6 +458,7 @@ always @(*) begin
             `jal:              Immediate__id_ex <= {{11{inst[31]}},{inst[31]},{inst[19:12]},inst[20],inst[30:21],1'b0};
             `jalr:             Immediate__id_ex <= {{20{inst[31]}},inst[31:20]}; 
             `op32_imm_alu:     Immediate__id_ex <= {{20{inst[31]}},inst[31:20]};
+            `op64_imm_alu:     Immediate__id_ex <= {{20{inst[31]}},inst[31:20]};
             `op_lui:           Immediate__id_ex <= {{inst[31:12]},12'b0};    
             `op_auipc:         Immediate__id_ex <= {{inst[31:12]},12'b0};
             `op32_branch:      Immediate__id_ex <= {{19{inst[31]}},{inst[31]},{inst[7]},{inst[30:25]},{inst[11:8]},1'b0};
