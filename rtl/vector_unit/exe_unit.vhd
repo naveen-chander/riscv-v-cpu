@@ -113,7 +113,8 @@ signal ALU_underflow    :   done_array;
 signal divbyzero	    :   done_array;
 signal illegal_internal :   STD_LOGIC;
 signal multi_cyc_inst   :   STD_LOGIC;
-signal MASK_VECTOR      :   STD_LOGIC_VECTOR(255 downto 0);
+signal MASK_VECTOR_VREGWR :   STD_LOGIC_VECTOR(255 downto 0);
+signal MASK_VECTOR_DMEMWR :   STD_LOGIC_VECTOR(255 downto 0);
 signal E_FA             :   chain_select;
 signal E_FB             :   chain_select;
 signal E_FC             :   chain_select;
@@ -201,10 +202,15 @@ div_stalls_ored		 <= DIV_BUSY(0) or DIV_BUSY(1) OR
 						DIV_BUSY(4) or DIV_BUSY(5) OR
 						DIV_BUSY(6) or DIV_BUSY(7) ;				  
 ------------------------------------------------------
-MASK_VECTOR			 <= MEM_WB_v0_DATA(0) & MEM_WB_v0_DATA(1) &
-						MEM_WB_v0_DATA(2) & MEM_WB_v0_DATA(3) &
-						MEM_WB_v0_DATA(4) & MEM_WB_v0_DATA(5) &
-						MEM_WB_v0_DATA(6) & MEM_WB_v0_DATA(7) ;
+MASK_VECTOR_VREGWR	 <= MEM_WB_v0_DATA(7) & MEM_WB_v0_DATA(6) &
+						MEM_WB_v0_DATA(5) & MEM_WB_v0_DATA(4) &
+						MEM_WB_v0_DATA(3) & MEM_WB_v0_DATA(2) &
+						MEM_WB_v0_DATA(1) & MEM_WB_v0_DATA(0) ;
+------------------------------------------------------
+MASK_VECTOR_DMEMWR	 <= EXE_MEM_v0_DATA(7) & EXE_MEM_v0_DATA(6) &
+						EXE_MEM_v0_DATA(5) & EXE_MEM_v0_DATA(4) &
+						EXE_MEM_v0_DATA(3) & EXE_MEM_v0_DATA(2) &
+						EXE_MEM_v0_DATA(1) & EXE_MEM_v0_DATA(0) ;
 illegal_internal <= '0';
 ----------------------------------------------------
 -- Stall for Counter Control 
@@ -654,10 +660,18 @@ begin
 end process VECTOR_CPU_MUX;	
 ------------------------------------------------------	
 
-DMEM_WE_GEN: process(MEM_WB_DONEs, DONEs_internal, EXE_MEM_Instructions)
+DMEM_WE_GEN: process(MEM_WB_DONEs, DONEs_internal, EXE_MEM_Instructions,MASK_VECTOR_DMEMWR)
 begin
 	for i in 0 to 7 loop
-		DMEM_WE(i) <= EXE_MEM_Instructions(i).dmw and ((not(DONEs_internal(i))) OR (not (MEM_WB_DONEs(((i) mod 8)))));
+		if EXE_MEM_Instructions(i).MASK_EN ='1' then
+			DMEM_WE(i) <= EXE_MEM_Instructions(i).dmw and 
+						((not(DONEs_internal(i))) OR (not (MEM_WB_DONEs(((i) mod 8))))) and
+						MASK_VECTOR_DMEMWR(to_integer(unsigned(EXE_MEM_counts(i))));
+		else
+		DMEM_WE(i) <= EXE_MEM_Instructions(i).dmw and 
+					 ((not(DONEs_internal(i))) OR (not (MEM_WB_DONEs(((i) mod 8)))));
+		end if;
+
 		DMEM_RE(i) <= EXE_MEM_Instructions(i).dmr ;
 	end loop;
 end process DMEM_WE_GEN;
@@ -718,7 +732,7 @@ end process MEM_WB_MUX;
 --VREG_WRITE_DATA XBAR
 -- Write Logic to Vector Destination Registers
 -- 
-vreg_write_xbar: process(MEM_WB_counts,MEM_WB_DATA,MEM_WB_Instructions,MASK_VECTOR,DONEs_internal,WB_FIN_DONEs)
+vreg_write_xbar: process(MEM_WB_counts,MEM_WB_DATA,MEM_WB_Instructions,MASK_VECTOR_VREGWR,DONEs_internal,WB_FIN_DONEs)
 variable count_mem : integer range 0 to 7;
 begin
 	count_mem := to_integer(unsigned(MEM_WB_counts(0))) mod 8;
@@ -731,7 +745,7 @@ begin
 		if MEM_WB_Instructions(i).MASK_EN = '1' then
 			-------------------------------------------------------------------------------------------------
 				VREG_WE(i)  <= MEM_WB_Instructions(((8-i+count_mem) mod 8)).REG_WE and
-							  MASK_VECTOR(to_integer(unsigned(MEM_WB_counts(i)))) and 
+							  MASK_VECTOR_VREGWR(to_integer(unsigned(MEM_WB_counts(i)))) and 
 							  ((not (DONEs_internal(((8-i+count_mem) mod 8)))) or (not (WB_FIN_DONEs(((8-i+count_mem) mod 8)))));
 			-------------------------------------------------------------------------------------------------
 		else								-- IF Vector Mask is Disabled
@@ -742,13 +756,13 @@ begin
 end process vreg_write_xbar;
 
 ---------------------------------------------------------
-Xoutreg_WE_gen: process(RD_EXE_Instructions,MASK_VECTOR, DONEs_internal, EXE_MEM_DONEs,RD_EXE_Counts)
+Xoutreg_WE_gen: process(RD_EXE_Instructions,MASK_VECTOR_VREGWR, DONEs_internal, EXE_MEM_DONEs,RD_EXE_Counts)
 begin 
 	for i in 0 to 7 loop
 		if RD_EXE_Instructions(i).MASK_EN = '1' then
 			--------------------------------------------------------------------------------------
 				Xoutreg_WE(i)	<= 	RD_EXE_Instructions(i).Xout 						and 
-									MASK_VECTOR(to_integer(unsigned(MEM_WB_counts(i)))) 	and 
+									MASK_VECTOR_VREGWR(to_integer(unsigned(MEM_WB_counts(i)))) 	and 
 									(	(not (DONEs_internal(((i))))) or (not (EXE_MEM_DONEs(i))));
 		else		-- IF Vector Mask is NOT enabled
 			--------------------------------------------------------------------------------------
