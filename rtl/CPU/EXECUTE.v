@@ -323,7 +323,15 @@ always @(*) begin
         {{7'b0000001},{3'b100},{`op32_muldiv}}:                 result_int <= div_res;                              
         {{7'b0000001},{3'b101},{`op32_muldiv}}:                 result_int <= div_res;                              
         {{7'b0000001},{3'b110},{`op32_muldiv}}:                 result_int <= div_res;                              
-        {{7'b0000001},{3'b111},{`op32_muldiv}}:                 result_int <= div_res;                              
+        {{7'b0000001},{3'b111},{`op32_muldiv}}:                 result_int <= div_res;  
+        {{7'b0000001},{3'b000},{`op64_muldiv}}:                 result_int <= mul_res;
+        {{7'b0000001},{3'b001},{`op64_muldiv}}:                 result_int <= mul_res;
+        {{7'b0000001},{3'b010},{`op64_muldiv}}:                 result_int <= mul_res;
+        {{7'b0000001},{3'b011},{`op64_muldiv}}:                 result_int <= mul_res;
+        {{7'b0000001},{3'b100},{`op64_muldiv}}:                 result_int <= div_res;                              
+        {{7'b0000001},{3'b101},{`op64_muldiv}}:                 result_int <= div_res;                              
+        {{7'b0000001},{3'b110},{`op64_muldiv}}:                 result_int <= div_res;                              
+        {{7'b0000001},{3'b111},{`op64_muldiv}}:                 result_int <= div_res;                               
         {{7'b00001??},{3'b010},{`amo}}:                         result_int <= swap_o1;         //amoswap instructions
         {{7'b00000??},{3'b010},{`amo}}:                         result_int <= adderout;        //amoadd instructions
         {{7'b00100??},{3'b010},{`amo}}:                         result_int <= xorout;          //amoxor instructions

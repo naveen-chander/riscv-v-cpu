@@ -36,7 +36,7 @@
 `define funct6__vnmsac	 		6'b101111
 `define funct6__vredsum	 		6'b000000	// Same as vadd!
 `define funct6__vdot	 		6'b111001	// Dot Product
-`define funct6__vrelu	 		6'b001001	// vand ReLu
+`define funct6__vmax	 		6'b001001	// vand ReLu
 `define funct6__vmaxval     	6'b000001	// vredand --> IMplements vmaxval
 `define funct6__vmaxuval    	6'b000010	// vredor 
 `define funct6__vminval     	6'b000011   //vredxor
@@ -163,6 +163,7 @@ assign rs1 	  		= Instruction[19:15];
 assign vs1 	  		= Instruction[19:15];
 assign vs2 	  		= Instruction[24:20];
 assign rs2 	  		= Instruction[24:20];
+assign lsuop 	  	= Instruction[24:20];
 assign vd  	  		= Instruction[11:7];
 assign rd  	  		= Instruction[11:7];
 assign uimm5  		= Instruction[19:15];
@@ -208,7 +209,7 @@ always @(*) begin
 		decode__vd  <= vd;
 		decode__RS1 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? rs1 : 
 						((opcode==`OP_VEC_ARITH) && (funct3 == `funct3__OPIVX) | (funct3 == `funct3__OPMVX) )? rs1: 0;
-		decode__RS2 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : rs2;
+		decode__RS2 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : lsuop;
 		decode__uimm5  <= ((opcode == `OP_VEC_ARITH) &&(funct3 == `funct3__OPIVI)) ? uimm5 : 0;	
 		
 		if 	(opcode == `OP_VEC_ARITH)
@@ -226,7 +227,7 @@ always @(*) begin
 			`funct6__vmacc	 	    : decode__funct <= 8'b00000011;
 			`funct6__vnmsac	 	    : decode__funct <= 8'b00000100;
 			`funct6__vdot			: decode__funct <= 8'b00000011;	// Same as MACC
-			`funct6__vrelu			: decode__funct <= 8'b00000101;	// ReLu Instruction
+			`funct6__vmax			: decode__funct <= 8'b00000101;	// for vmax and ReLu Instruction
 			`funct6__vmaxval        : decode__funct <= 8'b10000000; //
 			`funct6__vmaxuval       : decode__funct <= 8'b10010000; //
 			`funct6__vminval        : decode__funct <= 8'b10100000; //

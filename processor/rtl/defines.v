@@ -13,6 +13,7 @@
 `define op32_branch 7'b1100011
 `define op32_loadop 7'b0000011
 `define op32_muldiv 7'b0110011
+`define op64_muldiv 7'b0111011
 `define op32_storeop 7'b0100011
 `define op64_imm_alu 7'b0011011
 `define op64_alu 7'b0111011

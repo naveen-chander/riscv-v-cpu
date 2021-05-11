@@ -484,6 +484,12 @@ always @(*) begin
                 Mult_Op__id_ex <= 2'b00;                                                //00 for signed multiplication
                 Div_Op__id_ex <= 2'b00;                                                 //dummy value
             end
+             {7'b0000001,`func_mul,`op64_muldiv}: begin
+                Mult_En__id_ex <= 1'b1;
+                Div_En__id_ex <= 1'b0;
+                Mult_Op__id_ex <= 2'b00;                                                //00 for signed multiplication
+                Div_Op__id_ex <= 2'b00;                                                 //dummy value
+            end           
             {7'b0000001,`func_mulh,`op32_muldiv}: begin
                 Mult_En__id_ex <= 1'b1;
                 Div_En__id_ex <= 1'b0;
@@ -508,7 +514,19 @@ always @(*) begin
                 Mult_Op__id_ex <= 2'b11;                                                //dummy value
                 Div_Op__id_ex <= 2'b11;                                                 //signed quotient
             end
+            {7'b0000001,`func_div,`op64_muldiv}: begin
+                Mult_En__id_ex <= 1'b0;
+                Div_En__id_ex <= 1'b1;
+                Mult_Op__id_ex <= 2'b11;                                                //dummy value
+                Div_Op__id_ex <= 2'b11;                                                 //signed quotient
+            end
             {7'b0000001,`func_divu,`op32_muldiv}: begin
+                Mult_En__id_ex <= 1'b0;
+                Div_En__id_ex <= 1'b1;
+                Mult_Op__id_ex <= 2'b11;                                                //dummy value
+                Div_Op__id_ex <= 2'b10;                                                 //unsigned quotient
+            end
+            {7'b0000001,`func_divu,`op64_muldiv}: begin
                 Mult_En__id_ex <= 1'b0;
                 Div_En__id_ex <= 1'b1;
                 Mult_Op__id_ex <= 2'b11;                                                //dummy value
@@ -520,7 +538,19 @@ always @(*) begin
                 Mult_Op__id_ex <= 2'b11;                                                //dummy value
                 Div_Op__id_ex <= 2'b01;                                                 //signed remainder
             end
+            {7'b0000001,`func_rem,`op64_muldiv}: begin
+                Mult_En__id_ex <= 1'b0;
+                Div_En__id_ex <= 1'b1;
+                Mult_Op__id_ex <= 2'b11;                                                //dummy value
+                Div_Op__id_ex <= 2'b01;                                                 //signed remainder
+            end
             {7'b0000001,`func_remu,`op32_muldiv}: begin
+                Mult_En__id_ex <= 1'b0;
+                Div_En__id_ex <= 1'b1;
+                Mult_Op__id_ex <= 2'b11;                                                //dummy value
+                Div_Op__id_ex <= 2'b00;                                                 //unsigned remainder
+            end
+            {7'b0000001,`func_remu,`op64_muldiv}: begin
                 Mult_En__id_ex <= 1'b0;
                 Div_En__id_ex <= 1'b1;
                 Mult_Op__id_ex <= 2'b11;                                                //dummy value
