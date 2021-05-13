@@ -369,7 +369,6 @@ wire [4:0] XRF_ADDR_VEC_UNIT;
 wire [31:0] XRF_DATAWR_VEC_UNIT;
 wire XRF_WE_VEC_UNIT;
 reg non_cacheable;
-reg non_cacheable_reg;
 
 assign Inst_Cache_Freeze = (Mult_Div_unit__Stall | FPU__Stall | Data_Cache__Stall | irq_icache_freeze | Double_Load_Store__Stall| Vector_freeze_PC) ;
 
@@ -949,6 +948,7 @@ vector_top VECTOR_UNIT(
 			.clk					(CLK					),
 			.reset                  (RST                    ),
 			.Branch_Taken__EX_MEM   (Branch_Taken__EX_MEM   ),
+			.Branch_Taken__MEM_WB   (Branch_Taken__MEM_WB   ),
 			.Instruction__IF_ID     (Instruction__IF_ID     ),
 			.Instruction__ID_EX     (Instruction__ID_EX     ),
 			.rs1_data               (RS1_Data__rf           ),

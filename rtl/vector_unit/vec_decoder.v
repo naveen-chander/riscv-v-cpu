@@ -212,7 +212,7 @@ always @(*) begin
 		decode__RS2 <= ((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE))? 0 : lsuop;
 		decode__uimm5  <= ((opcode == `OP_VEC_ARITH) &&(funct3 == `funct3__OPIVI)) ? uimm5 : 0;	
 		
-		if 	(opcode == `OP_VEC_ARITH)
+		if 	(opcode == `OP_VEC_ARITH) begin
 		case(funct6)
 			`funct6__vadd 			: decode__funct <= 8'b00000000;
 			`funct6__vsub 			: decode__funct <= 8'b00000000;	//Yet to be implemented	
@@ -238,6 +238,11 @@ always @(*) begin
 			`funct6__vminuidx       : decode__funct <= 8'b11110000; //
 			default 				: decode__funct <= 8'b00000000;  //vadd
 		endcase
+		end
+		else begin
+			decode__funct <=8'b0;
+		end
+
 		decode__permute <= ( (opcode == `OP_VEC_ARITH) && (funct6 ==`funct6__vslidedown) ) ? 2'b01 : 0;	//Fix to slide1down
 		decode__mask_en <= vector_mask;
 		//-------------decode__ALUSrc-----------------------
@@ -249,8 +254,10 @@ always @(*) begin
 		  else
 		      decode__ALUSrc <= 2'b00;
 		  end
-		else
-		  decode__ALUSrc <= 2'b00;
+		else begin
+			decode__ALUSrc <= 2'b00;
+		end
+		  
         //-----------------------------------------------------
 		decode__dmr		<= (opcode == `OP_VEC_LOAD)   ? 1'b1 :1'b0;
 		decode__dmw		<= (opcode == `OP_VEC_STORE)  ? 1'b1 :1'b0;
@@ -266,10 +273,13 @@ always @(*) begin
 				 ((funct6 == `funct6__vminidx )  &&   (funct3 == `funct3__OPIVV) ) ||
 				 ((funct6 == `funct6__vminuidx)   &&  (funct3 == `funct3__OPIVV) ) 
 				)		//Only for vredsum,vdot,vmax_min
-				decode__Xout <= 1;
-			end
+				decode__Xout <= 1'b1;
+			
 			else
-				decode__Xout <= 0;
+				decode__Xout <= 1'b0;
+		end
+		else
+			decode__Xout <= 1'b0;
 		///------------------------------------------------------
 	end 
 end

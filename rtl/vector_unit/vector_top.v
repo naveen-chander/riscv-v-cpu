@@ -33,6 +33,7 @@ module vector_top(
     input 				clk,
     input 				reset,
 	input				Branch_Taken__EX_MEM,
+	input				Branch_Taken__MEM_WB,
     input [31:0] 		Instruction__IF_ID,
     input [31:0] 		Instruction__ID_EX,
     input [31:0] 		rs1_data,
@@ -182,8 +183,6 @@ reg  [1:0]	decode__mode_lsu;
 reg [2:0]  	dispatch_counter;
 reg [3:0]  	freeze_thd;
 reg 		x_int;						//Interrupting Scalar Instruction Detector
-reg 		Branch_Taken__MEM_WB;		//Branch taken Delayed.. Required to anull
-										//the third vector instruction
 reg 		freeze_v;					//Interrupting Scalar Instruction Detector
 wire 		freeze_vector;				//Signal that freezes - 
 										// (a) Vector_instruction Counter
@@ -418,16 +417,13 @@ assign freeze_vector = sv_vv ? freeze_vector_ops_delayed : freeze_vector_ops ;
 //////////////////////////////////////////////
 //  Delayed signals --
 //	1. freeze_vector_ops for sv_sequence 		//
-//	2. Branch_Taken__MEM_WB for sv_sequence 		//
 ////////////////////////////////////////////////
 always @(posedge reset or posedge clk) begin
 	if(reset) begin
 		freeze_vector_ops_delayed <= 1'b0;
-		Branch_Taken__MEM_WB	<= 1'b0;
 	end
 	else begin
 		freeze_vector_ops_delayed <= freeze_vector_ops ;
-		Branch_Taken__MEM_WB <= Branch_Taken__EX_MEM;
 	end
 end
 
