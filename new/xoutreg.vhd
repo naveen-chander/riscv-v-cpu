@@ -65,9 +65,12 @@ begin
 			end if;
 		end loop;
 	end if;
-	--- Xoutreg READ
+end process;
+XoutReader: process(Xoutreg)
+begin
+--- Xoutreg READ
 	for i in 0 to 7 loop
 		RDATA(i) <= Xoutreg(i);
 	end loop;
-end process;
+end process XoutReader;		
 end Behavioral;

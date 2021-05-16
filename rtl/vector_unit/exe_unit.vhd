@@ -629,7 +629,7 @@ VECTOR_CPU_INF: cpu_inf port map(
 ------------------------------------------------------	
 -- CPU INterface
 VECTOR_CPU_MUX: process(vs1, vd, vs1_CPU, vd_CPU, DMEM_WE_Xbar, DMEM_ADDR_Xbar, dmem_din_xbar,
-						DMEM_ADDR_CPU, PROC_DIN, DONE_int, DMEM_WE_CPU, VREG_WE_CPU,REG_DATA_WR)
+						DMEM_ADDR_CPU, PROC_DIN, DONE_int, DMEM_WE_CPU, VREG_WE_CPU,REG_DATA_WR, VREG_WE)
 
 begin
 	if DONE_int = '1' then -- CPU Access Case
@@ -931,7 +931,7 @@ end process Fin_Stage;
 -- /()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()
 --             EX STAGE FORWARDING
 -- /()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()/()
-op1_chain: process(stalls_internal_ored,EXE_MEM_Instructions,RD_EXE_Instructions,MEM_WB_Instructions,WB_FIN_Instructions,RD_EXE_counts)
+op1_chain: process(stalls_internal_ored,div_stalls_ored,EXE_MEM_Instructions,RD_EXE_Instructions,MEM_WB_Instructions,WB_FIN_Instructions,RD_EXE_counts)
 begin
 	if stalls_internal_ored = '1' then 
 		------------------------------------
@@ -1109,7 +1109,7 @@ end process op1_chain;
 ---------------------------------------------------------
 -------OPerand 2 Chaining Logic                  --------
 ---------------------------------------------------------
-op2_chain: process(stalls_internal_ored,EXE_MEM_Instructions,RD_EXE_Instructions,MEM_WB_Instructions,WB_FIN_Instructions,RD_EXE_counts)
+op2_chain: process(stalls_internal_ored,div_stalls_ored,EXE_MEM_Instructions,RD_EXE_Instructions,MEM_WB_Instructions,WB_FIN_Instructions,RD_EXE_counts)
 begin
 	if stalls_internal_ored = '1' then 
 		------------------------------------

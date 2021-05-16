@@ -262,7 +262,7 @@ cpu cpu1(.clk(clk_int),.clk_x2(clk_x2),.rst(rst),.led(lcd_reg),
         .wb_dat_i(wb_dat_i),.wb_cyc_o(wb_cyc_o), .wb_adr_o(wb_adr_o), .wb_stb_o(wb_stb_o),
         .wb_we_o(wb_we_o), .wb_sel_o(wb_sel_o), .wb_dat_o(wb_dat_o),.wb_cti_o(wb_cti_o),
         .wb_bte_o(wb_bte_o),.cache_flush(cache_flush_int),.cache_en(cache_en_int),.tick_en(tick_en),
-        .addr_exception(addr_exception),.interrupt(interrupt)
+        .addr_exception(addr_exception),.interrupt(interrupt),.ALU_monitor(ALU_monitor)
     `ifdef TEST
     ,.block_instr_int(blck_instr_int)
     `endif
