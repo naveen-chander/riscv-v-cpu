@@ -336,24 +336,24 @@ end
 
 dcache ram_w0_1 (                                             //w0 data ram bank
   .clka(clk),.rsta(rst),.wea(we_a_w0[15:0]),.addra(dcache_addr_w0_a),.dina(dcache_in_a_w0[127:0]),.douta(w0_a_1),
-  .clkb(clk),.rstb(rst),.web(we_b_w0[15:0]),.addrb(dcache_addr_w0_b),.dinb(dcache_in_b_w0[127:0]),.doutb(w0_b_1)
+  .clkb(clk),.rstb(rst),.web(16'b0),.addrb(dcache_addr_w0_b),.dinb(dcache_in_b_w0[127:0]),.doutb(w0_b_1)
 );
 
 dcache ram_w0_2 (                                             //w0 data ram bank
   .clka(clk),.rsta(rst),.wea(we_a_w0[31:16]),.addra(dcache_addr_w0_a),.dina(dcache_in_a_w0[255:128]),.douta(w0_a_2),
-  .clkb(clk),.rstb(rst),.web(we_b_w0[31:16]),.addrb(dcache_addr_w0_b),.dinb(dcache_in_b_w0[255:128]),.doutb(w0_b_2)
+  .clkb(clk),.rstb(rst),.web(16'b0),.addrb(dcache_addr_w0_b),.dinb(dcache_in_b_w0[255:128]),.doutb(w0_b_2)
 );
 
 
 
 dcache ram_w1_1 (                                             //w1 data ram bank
   .clka(clk),.rsta(rst),.wea(we_a_w1[15:0]),.addra(dcache_addr_w1_a),.dina(dcache_in_a_w1[127:0]),.douta(w1_a_1),
-  .clkb(clk),.rstb(rst),.web(we_b_w1[15:0]),.addrb(dcache_addr_w1_b),.dinb(dcache_in_b_w1[127:0]),.doutb(w1_b_1)
+  .clkb(clk),.rstb(rst),.web(16'b0),.addrb(dcache_addr_w1_b),.dinb(dcache_in_b_w1[127:0]),.doutb(w1_b_1)
 );
 
 dcache ram_w1_2 (                                             //w1 data ram bank
   .clka(clk),.rsta(rst),.wea(we_a_w1[31:16]),.addra(dcache_addr_w1_a),.dina(dcache_in_a_w1[255:128]),.douta(w1_a_2),
-  .clkb(clk),.rstb(rst),.web(we_b_w1[31:16]),.addrb(dcache_addr_w1_b),.dinb(dcache_in_b_w1[255:128]),.doutb(w1_b_2)
+  .clkb(clk),.rstb(rst),.web(16'b0),.addrb(dcache_addr_w1_b),.dinb(dcache_in_b_w1[255:128]),.doutb(w1_b_2)
 );
 
 
@@ -366,7 +366,7 @@ tag_ram tag_w0 (
   .douta(tag_a_w0_int), // output [31 : 0] douta
   .clkb(clk), // input clkb
   .rstb(rst),
-  .web(we_tag_b_w0), // input [3 : 0] web
+  .web(4'b0), // input [3 : 0] web
   .addrb(tag_addr_b_w0), // input [7 : 0] addrb --[6:0] now
   .dinb(tag_data_b_w0), // input [31 : 0] dinb
   .doutb(tag_b_w0_int) // output [31 : 0] doutb
@@ -381,7 +381,7 @@ tag_ram tag_w1 (
   .douta(tag_a_w1_int), // output [31 : 0] douta
   .clkb(clk), // input clkb
   .rstb(rst),
-  .web(we_tag_b_w1), // input [3 : 0] web
+  .web(4'b0), // input [3 : 0] web
   .addrb(tag_addr_b_w1), // input [7 : 0] addrb --[6:0] now
   .dinb(tag_data_b_w1), // input [31 : 0] dinb
   .doutb(tag_b_w1_int) // output [31 : 0] doutb
