@@ -24,6 +24,7 @@ module v_wrapper(
 input 			clk 			,
 input 			reset 			,
 input [8:0]		vl				,	// Vector LENGTH Register
+input [1:0]		vcsr_quant		,	// Vector Quantization Register
 input 			I_clear			,	// Clear all instructions
 input [2:0]		I_id			,	// Instruction 0 --> 7
 output 			ALU_mon         ,
@@ -63,6 +64,7 @@ wrapper wrapper_vhd(
 	.clk 			(clk 		),
 	.reset 			(reset 		),
 	.vl				(vl			),
+	.vcsr_quant     (vcsr_quant ),
 	.I_clear		(I_clear	),
 	.I_id			(I_id		),
 	.ALU_mon     	(ALU_mon    ),

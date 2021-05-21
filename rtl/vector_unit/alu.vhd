@@ -31,6 +31,7 @@ generic(width : integer :=32);
            op3 : in signed (width-1 downto 0);
 		   funct: in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
            cin  : in STD_LOGIC;
+           vcsr_quant : in std_logic_vector(1 downto 0);
            y    : out signed(width-1 downto 0);
            cout : out std_logic;
            overflow : out std_logic;
@@ -69,8 +70,12 @@ min_negative <= x"80" when WIDTH=8 else
 
 --------------------------------------------
 --- Multiply 
-prod <= ( (op1) * (op2));
-prod_h <= prod(55 downto 24);	-- for 
+prod <= ( (op1) * (op2));   
+prod_h <= prod(31 downto  0) when vcsr_quant = "00" else        -- Q32.0
+          prod(39 downto  8) when vcsr_quant = "01" else        -- Q24.8
+          prod(47 downto 16) when vcsr_quant = "10" else        -- Q16.16
+          prod(55 downto 24);                                   -- Q8.24
+
 --  prod_h <= prod(31 downto 0);	-- for non fixed point integer ops
 mac  <= op3_int + ('0'&prod_h);
 msac <= op3_int - ('0'&prod_h);

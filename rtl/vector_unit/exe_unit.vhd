@@ -32,6 +32,7 @@ entity exe_unit is
 	    clk 		: in  STD_LOGIC;
         reset 		: in  STD_LOGIC;	-- Asynchronous RESET
 		vl			: in  STD_LOGIC_VECTOR(8 DOWNTO 0);			-- Vector LENGTH Register
+		vcsr_quant  : in  STD_LOGIC_VECTOR(1 downto 0);			-- From vector CSR
 		Instruction : in  i_rec;		-- Instruction Specification
 		I_id		: in  std_logic_vector(2 downto 0);	-- Id of Instructions in I-Bank
 		I_clear		: in  std_logic;	-- Sync Clear for Instruction Bank
@@ -312,6 +313,7 @@ GEN_ALUs:
 			op3 	    =>	signed(op3(i)) 			, 
 			funct	    =>	RD_EXE_Instructions(i).funct(2 downto 0), 
 			cin  	    =>	'0'  					 ,  -- To be added later for supporting adc inst
+			vcsr_quant  =>  vcsr_quant			     ,  -- From vector CSR Register
 			y    	    =>	ALU_y(i)    	 		 , 
 			cout 	    =>	ALU_cout(i) 	 		 , 
 			overflow    =>	ALU_overflow(i) 		 , 

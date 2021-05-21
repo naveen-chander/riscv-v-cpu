@@ -39,6 +39,7 @@ module vector_top(
     input [31:0] 		rs1_data,
     input [31:0] 		rs2_data,
     input [8:0] 		vl,
+    input [8:0] 		vcsr_quant,
     input 	            freeze_vector_ops,
     input 	            Data_Cache__Stall,
 	// Processor interface Related//
@@ -255,6 +256,7 @@ v_wrapper  VEC_EXE_UNIT(
 	.clk 			(clk 		),
 	.reset 			(reset 		),
 	.vl				(vl			),
+	.vcsr_quant		(vcsr_quant ),
 	.I_clear		(I_clear	),
 	.I_id			(I_id		),
 	.ALU_mon     	(ALU_mon    ),

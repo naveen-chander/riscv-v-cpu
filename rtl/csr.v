@@ -47,7 +47,8 @@ module csr
     output [2:0] frm,
     
     input [31:0] pc_id_ex,
-	output[8:0] vector_length
+	output[8:0] vector_length,
+	output [1:0] vcsr_quant
           
 );
 
@@ -64,6 +65,7 @@ reg [31:0] csr_mbadaddr;
 reg [1:0] cur_prev_mode; 
 
 reg [8:0] vl; // Vector Length Register
+reg [1:0] vq; // Vector Length Register
 
 
 reg mret1;
@@ -195,6 +197,18 @@ end
 ////////////////////////////////////////////////////////////////
 assign vector_length = vl;
 ////////////////////////////////////////////////////////////////
+// Vector Length CSR Register
+always @(posedge clk) begin
+    if(rst) 
+        vq = 2'b11;	//Default Quantization Q8.24
+    else if(csr_wr_en && (csr_adr_wr == `vxrm_csr_addr) ) begin
+			vq <= csr_wrdata;
+	end
+		
+end
+////////////////////////////////////////////////////////////////
+assign vcsr_quant = vq;
+////////////////////////////////////////////////////////////////
 always @(posedge clk) begin
     if(rst) begin
         csr_rddata = 32'b0;
@@ -245,6 +259,8 @@ always @(posedge clk) begin
         end
 		else if(csr_adr_rd == `vec_len_csr_addr) 
 			csr_rddata = vl;		// Read Vector Length
+		else if(csr_adr_rd == `vxrm_csr_addr) 
+			csr_rddata = vcsr_quant;		// Read Vector Length
         else begin
             csr_rddata = 32'b0;
         end    

@@ -130,7 +130,8 @@ port(op1       : in signed (width-1 downto 0);
     op2       : in signed (width-1 downto 0);
     op3       : in signed (width-1 downto 0);
     funct     : in std_logic_vector(2 downto 0); -- '0' => ADD ; '1' => Multiply
-    cin       : in STD_LOGIC;
+    cin       : in STD_LOGIC;          
+    vcsr_quant : in std_logic_vector(1 downto 0);
     y         : out signed(width-1 downto 0);
     cout      : out std_logic;
     overflow  : out std_logic;

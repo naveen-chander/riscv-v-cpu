@@ -31,6 +31,7 @@ port(
 	clk 			: in  STD_LOGIC;
 	reset 			: in  STD_LOGIC;
 	vl				: in  STD_LOGIC_VECTOR(8 DOWNTO 0);			-- Vector LENGTH Register
+	vcsr_quant		: in  STD_LOGIC_VECTOR(1 DOWNTO 0);			-- Vector LENGTH Register
 	I_clear			: in  std_logic; 						-- Clear all instructions
 	I_id			: in  std_logic_vector(2 downto 0);		-- Instruction 0 --> 7
 	ALU_mon         : out std_logic;
@@ -72,20 +73,21 @@ architecture Behavioral of wrapper is
 component exe_unit is
     Port  ( 
 	    clk 		: in  STD_LOGIC;
-        reset 		: in  STD_LOGIC;						-- Asynchronous RESET
-		vl			: in  STD_LOGIC_VECTOR(8 DOWNTO 0);		-- Vector LENGTH Register
-		Instruction : in  i_rec;							-- Instruction Specification
-		I_id		: in  std_logic_vector(2 downto 0);		-- Id of Instructions in I-Bank
-		I_clear		: in  std_logic;						-- Sync Clear for Instruction Bank
-		ALU_mon     : out std_logic;						-- Output brought out to prevent logic optimization
-		stall		: out std_logic;						-- High during Stall cycles
-		DONE		: out std_logic;						-- High if Convoy is not executing an instruction
+        reset 		: in  STD_LOGIC;	-- Asynchronous RESET
+		vl			: in  STD_LOGIC_VECTOR(8 DOWNTO 0);			-- Vector LENGTH Register
+		vcsr_quant  : in  STD_LOGIC_VECTOR(1 downto 0);			-- From vector CSR
+		Instruction : in  i_rec;		-- Instruction Specification
+		I_id		: in  std_logic_vector(2 downto 0);	-- Id of Instructions in I-Bank
+		I_clear		: in  std_logic;	-- Sync Clear for Instruction Bank
+		ALU_mon     : out std_logic;	-- Output brought out to prevent logic optimization
+		stall		: out std_logic;	-- High during Stall cycles
+		DONE		: out std_logic;	-- High if Convoy is not executing an instruction
 		----------------------Processor interface----------------------------------------
 		PROC_ADDR   : in  STD_LOGIC_VECTOR(31 downto 0);	-- Adress from CPU to RW VREG/VMEM
 		PROC_DIN    : in  STD_LOGIC_VECTOR(31 downto 0);	-- Write Data
 		PROC_WE		: in  STD_LOGIC;						-- WE
 		PROC_DOUT   : out STD_LOGIC_VECTOR(31 downto 0);		-- Read Data from VREG/VMEM
-		-----------------------------------------------------
+		-----------------------XRF Write INterface---------------------------------------
 		XRF_ADDR    : out STD_LOGIC_VECTOR(4 DOWNTO 0);		-- Address for Writing Scalar OUtputs into XRF
 		XRF_DATAWR  : out STD_LOGIC_VECTOR(31 DOWNTO 0);    -- Scalar Data
 		XRF_WE      : out std_logic
@@ -98,6 +100,7 @@ VECTOR_EXE_UNIT_PIPE: exe_unit port map(
 	clk 					=> clk 				,		
 	reset 		    		=> reset 			,	
 	vl			    		=> vl				,	
+	vcsr_quant				=> vcsr_quant		,
 	I_id		    		=> I_id				,	
 	I_clear		    		=> I_clear			,	
 	ALU_mon         		=> ALU_mon  		,    

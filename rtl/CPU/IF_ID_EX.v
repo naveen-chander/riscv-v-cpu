@@ -341,6 +341,7 @@ wire irq_ctrl_dec_src1;
 wire irq_ctrl_dec_src2;
 wire IF_ID_Freeze__irq;
 wire [8:0] vector_length;
+wire [1:0] vcsr_quant;
 reg  freeze_vector_ops;			// vector unit will freeze with assertion
 wire [31:0] vector_mem_data;
 
@@ -954,6 +955,7 @@ vector_top VECTOR_UNIT(
 			.rs1_data               (RS1_Data__rf           ),
 			.rs2_data               (RS2_Data__rf           ),
 			.vl                     (vector_length          ),
+			.vcsr_quant             (vcsr_quant             ),
 			.freeze_vector_ops      (freeze_vector_ops      ),
 			.v_stall                (Vector__Stall          ),
 			.Data_Cache__Stall      (Data_Cache__Stall      ),
@@ -1243,7 +1245,8 @@ Sys_counter sc1( .rst(RST),
          .FPU_flags(FPU_flags),
          .frm(frm),
          .pc_id_ex(pc_id_ex),
-		 .vector_length(vector_length)
+		 .vector_length(vector_length),
+         .vcsr_quant(vcsr_quant)
 		);
          
 

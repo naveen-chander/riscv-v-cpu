@@ -28,6 +28,7 @@
 // Add vcsr_opcode----------------
 `define vsetvl 7'b1010111
 `define vec_len_csr_addr 12'hC20
+`define vxrm_csr_addr 12'h00A   // FOr Vector Unit Quantization 00 =>Q32.0 ; 01=> Q24.8; 10=>Q16.16; 11=>Q8.24
 `define max_vector_length 9'd64 // allocated 9 bits to accomodate for vl =256 in future
 
 `define VEC_REG_START_ADDR 32'h0008_0000
