@@ -11,6 +11,9 @@ interrupt
 `ifdef itlb_def
 ,vpn_to_ppn_req
 `endif  
+`ifdef ila_debug
+,debug_clk
+`endif  
 );
 
 input rst;
@@ -38,6 +41,10 @@ input cache_en;
 `ifdef itlb_def
 output vpn_to_ppn_req;
 `endif 
+
+`ifdef ila_debug
+input debug_clk;
+`endif  
 
 output tick_en;
 //output [31:0] sp;
@@ -101,6 +108,9 @@ IF_ID_EX Pipeline( .CLK(clk),
                    `ifdef itlb_def
                    ,.vpn_to_ppn_req(vpn_to_ppn_req)
                    `endif  
+                    `ifdef ila_debug
+                    ,.debug_clk(debug_clk)
+                    `endif  
                    );
 
 
@@ -145,6 +155,7 @@ dcache_biu db1( //wishbone and controller interfacee I/Os
                 `else
                 ,.cache_flush(cache_flush)
                 `endif
+
                 /////////////////////////////////////
                 );
 

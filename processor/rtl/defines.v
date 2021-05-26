@@ -5,6 +5,7 @@
 //`define rom 1
 //`define PWM_IMPL 1
 `define Demo_En 1
+`define ila_debug 1
 //`define itlb_def 1'b1
 //`define test_tlb 1'b1
 //`define hardware_test 1'b0

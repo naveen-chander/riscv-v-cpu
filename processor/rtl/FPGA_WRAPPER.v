@@ -23,6 +23,7 @@
 module FPGA_WRAPPER(rst_in,clk_in1_n,clk_in1_p,led,int_in, ALU_monitor,
 `ifdef UART_IMPL_PER
 ,srx_pad_i,stx_pad_o
+,rts_pad_o,cts_pad_i
 //,rts_pad_o,cts_pad_i,dtr_pad_o,dsr_pad_i,ri_pad_i,dcd_pad_i
 `endif
 `ifdef SW_LED_IMPL
@@ -50,8 +51,8 @@ module FPGA_WRAPPER(rst_in,clk_in1_n,clk_in1_p,led,int_in, ALU_monitor,
 `ifdef UART_IMPL_PER
 input 								 srx_pad_i;
 output 								 stx_pad_o;
-//output 								 rts_pad_o;
-//input 								 cts_pad_i;
+output 								 rts_pad_o;
+input 								 cts_pad_i;
 //output 								 dtr_pad_o;
 //input 								 dsr_pad_i;
 //input 								 ri_pad_i;
@@ -102,7 +103,10 @@ wire [31:0] led_w;
 
 wire clk_int;
 wire clk_x2;
+wire clk_x3;
 
+wire  rts_pad_o;
+wire  cts_pad_i;
 wire [31:0] wb_dat_emu;
 wire [31:0] wb_dat_uart;
 wire [31:0] p;
@@ -192,14 +196,35 @@ always @(posedge clk_int) begin
     rst     <= rst_int;
 end
 
-clk_wiz_0 clk_core
-(
-// Clock in ports
-.clk_in1_p(clk_in1_p),    // input clk_in1_p
-.clk_in1_n(clk_in1_n),    // input clk_in1_n
-// Clock out ports
-.clk_out1(clk_int),    // output clk_out1
-.clk_out2(clk_x2));    // output clk_out2
+
+  clk_wiz_0 clk_core
+   (
+    // Clock out ports
+    .clk_out1(clk_int),     // output clk_out1
+    .clk_out2(clk_x2),     // output clk_out2
+    .clk_out3(clk_x3),     // output clk_out3
+    // Status and control signals
+    .reset(reset), // input reset
+   // Clock in ports
+    .clk_in1_p(clk_in1_p),    // input clk_in1_p
+    .clk_in1_n(clk_in1_n));    // input clk_in1_n
+
+
+
+
+
+
+//clk_wiz_0 clk_core
+//(
+//// Clock in ports
+//.clk_in1_p(clk_in1_p),    // input clk_in1_p
+//.clk_in1_n(clk_in1_n),    // input clk_in1_n
+//// Clock out ports
+//.clk_out1(clk_int),    // output clk_out1
+//.clk_out3(clk_x3),    // output clk_out3
+//.clk_out2(clk_x2));    // output clk_out2
+
+
 `ifdef secded
 ext_emulator_secded em2(.clk(clk_int),.rst(rst),.wb_dat_i(wbs_dat_i[31:0]),.wb_cyc_o(wbs_cyc_o[0]),.wb_adr_o(wbs_adr_o[31:0]),.wb_stb_o(wbs_stb_o[0]),
 .wb_we_o(wbs_we_o[0]),.wb_sel_o(wbs_sel_o[3:0]),.wb_dat_o(wbs_dat_o[31:0]),.wb_cti_o(wbs_cti_o[2:0]),.wb_bte_o(wbs_bte_o[1:0]),.clmode(clmode),
@@ -268,6 +293,9 @@ cpu cpu1(.clk(clk_int),.clk_x2(clk_x2),.rst(rst),.led(lcd_reg),
     `endif
     `ifdef itlb_def
     ,.vpn_to_ppn_req(vpn_to_ppn_req)
+    `endif     
+    `ifdef ila_debug
+    ,.debug_clk(clk_x3)
     `endif  
     );     
 
@@ -302,8 +330,15 @@ PWM pwm1(
  .data_in(lcd_reg)
   );
 
-vio_0 VIO( .clk(clk_int),.probe_out0(rst_VIO));
+//vio_0 VIO( .clk(clk_int),.probe_out0(rst_VIO));
   
+
  `endif
-    
+ vio_0 VIO (
+  .clk(clk_int),                // input wire clk
+  .probe_in0(ALU_monitor),    // input wire [0 : 0] probe_in0
+  .probe_in1(stx_pad_o),    // input wire [0 : 0] probe_in1
+  .probe_in2(srx_pad_i),    // input wire [0 : 0] probe_in2
+  .probe_out0(rst_VIO)  // output wire [0 : 0] probe_out0
+);   
 endmodule

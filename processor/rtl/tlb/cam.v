@@ -299,11 +299,11 @@ always @ (posedge clk) begin
             end        
         end
 
-    ila_0 debugger( .clk(clk),
-                    .probe0(miss_counter),
-                    .probe1(hit_counter)
-                    );
-
+   // ila_0 debugger( .clk(clk),
+   //                 .probe0(miss_counter),
+   //                 .probe1(hit_counter)
+   //                 );
+//
 
 
 
