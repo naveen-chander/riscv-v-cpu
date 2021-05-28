@@ -45,9 +45,6 @@ module IF_ID_EX
     input addr_exception,
     input [31:0] interrupt,
     
-      `ifdef ila_debug
-    input debug_clk,
-    `endif   
     
     output [63:0] led,
     output ALU_monitor, // CAn be safely ignored. But this must be brought out ;
@@ -1264,52 +1261,52 @@ Sys_counter sc1( .rst(RST),
                    ,.csr_rddata(csr_indata_intr),.freeze(Mult_Div_unit__Stall || FPU__Stall || Data_Cache__Stall || Inst_Cache__Stall || Double_Load_Store__Stall)
                    );
 
-`ifdef ila_debug
-(* mark_debug = "true" *) wire[31:0] pc_cache_dbg;
-(* mark_debug = "true" *) wire[31:0] Instruction__IF_ID_dbg;
-(* mark_debug = "true" *) wire[4:0] RD_Addr__EX_MEM_dbg;
-(* mark_debug = "true" *) wire[31:0] RD_Data__mem_wb_dbg;
-(* mark_debug = "true" *) wire Reg_Write_Enable__EX_MEM_dbg;
-(* mark_debug = "true" *) wire Inst_Cache__Stall_dbg;
-(* mark_debug = "true" *) wire Data_Cache__Stall_dbg;
-(* mark_debug = "true" *) wire Mult_Div_unit__Stall_dbg;
-(* mark_debug = "true" *) wire FPU__Stall_dbg;
-(* mark_debug = "true" *) wire [4:0] Load_Store_Op__Port1_dbg;
-(* mark_debug = "true" *) wire [31:0] proc_addr_port1_dbg;
-(* mark_debug = "true" *) wire [31:0] Store_Data_dbg;
-(* mark_debug = "true" *) wire [31:0] proc_data_port1_int_dbg;
-
-assign  pc_cache_dbg                =pc_cache;                                              
-assign  Instruction__IF_ID_dbg      =Instruction__IF_ID;   
-assign  RD_Addr__EX_MEM_dbg         =RD_Addr__EX_MEM;
-assign  RD_Data__mem_wb_dbg         =RD_Data__mem_wb;
-assign  Reg_Write_Enable__EX_MEM_dbg=Reg_Write_Enable__EX_MEM;
-assign  Inst_Cache__Stall_dbg       =Inst_Cache__Stall;
-assign  Data_Cache__Stall_dbg       =Data_Cache__Stall;
-assign  Mult_Div_unit__Stall_dbg    =Mult_Div_unit__Stall;
-assign  FPU__Stall_dbg              =FPU__Stall;
-assign  Load_Store_Op__Port1_dbg    =Load_Store_Op__Port1;
-assign  proc_addr_port1_dbg         =proc_addr_port1;
-assign  Store_Data_dbg              =Store_Data;
-assign  proc_data_port1_int_dbg     =proc_data_port1_int;
-
-ila_2 debugger( 
-                .clk(CLK),
-                .probe0(pc_cache_dbg),
-                .probe1(Instruction__IF_ID_dbg),
-                .probe2(RD_Addr__EX_MEM_dbg),
-                .probe3(RD_Data__mem_wb_dbg),
-                .probe4(Reg_Write_Enable__EX_MEM_dbg),
-                .probe5(Inst_Cache__Stall_dbg),
-                .probe6(Data_Cache__Stall_dbg),
-                .probe7(Mult_Div_unit__Stall_dbg),
-                .probe8(FPU__Stall_dbg),
-                .probe9(Load_Store_Op__Port1_dbg),
-                .probe10(proc_addr_port1_dbg),
-                .probe11(Store_Data_dbg),
-                .probe12(proc_data_port1_int_dbg),
-                .probe13(Double_Load_Store__Stall));
-`endif     
+// `ifdef ila_debug
+// (* mark_debug = "true" *) wire[31:0] pc_cache_dbg;
+// (* mark_debug = "true" *) wire[31:0] Instruction__IF_ID_dbg;
+// (* mark_debug = "true" *) wire[4:0] RD_Addr__EX_MEM_dbg;
+// (* mark_debug = "true" *) wire[31:0] RD_Data__mem_wb_dbg;
+// (* mark_debug = "true" *) wire Reg_Write_Enable__EX_MEM_dbg;
+// (* mark_debug = "true" *) wire Inst_Cache__Stall_dbg;
+// (* mark_debug = "true" *) wire Data_Cache__Stall_dbg;
+// (* mark_debug = "true" *) wire Mult_Div_unit__Stall_dbg;
+// (* mark_debug = "true" *) wire FPU__Stall_dbg;
+// (* mark_debug = "true" *) wire [4:0] Load_Store_Op__Port1_dbg;
+// (* mark_debug = "true" *) wire [31:0] proc_addr_port1_dbg;
+// (* mark_debug = "true" *) wire [31:0] Store_Data_dbg;
+// (* mark_debug = "true" *) wire [31:0] proc_data_port1_int_dbg;
+// 
+// assign  pc_cache_dbg                =pc_cache;                                              
+// assign  Instruction__IF_ID_dbg      =Instruction__IF_ID;   
+// assign  RD_Addr__EX_MEM_dbg         =RD_Addr__EX_MEM;
+// assign  RD_Data__mem_wb_dbg         =RD_Data__mem_wb;
+// assign  Reg_Write_Enable__EX_MEM_dbg=Reg_Write_Enable__EX_MEM;
+// assign  Inst_Cache__Stall_dbg       =Inst_Cache__Stall;
+// assign  Data_Cache__Stall_dbg       =Data_Cache__Stall;
+// assign  Mult_Div_unit__Stall_dbg    =Mult_Div_unit__Stall;
+// assign  FPU__Stall_dbg              =FPU__Stall;
+// assign  Load_Store_Op__Port1_dbg    =Load_Store_Op__Port1;
+// assign  proc_addr_port1_dbg         =proc_addr_port1;
+// assign  Store_Data_dbg              =Store_Data;
+// assign  proc_data_port1_int_dbg     =proc_data_port1_int;
+// 
+// ila_2 debugger( 
+//                 .clk(CLK),
+//                 .probe0(pc_cache_dbg),
+//                 .probe1(Instruction__IF_ID_dbg),
+//                 .probe2(RD_Addr__EX_MEM_dbg),
+//                 .probe3(RD_Data__mem_wb_dbg),
+//                 .probe4(Reg_Write_Enable__EX_MEM_dbg),
+//                 .probe5(Inst_Cache__Stall_dbg),
+//                 .probe6(Data_Cache__Stall_dbg),
+//                 .probe7(Mult_Div_unit__Stall_dbg),
+//                 .probe8(FPU__Stall_dbg),
+//                 .probe9(Load_Store_Op__Port1_dbg),
+//                 .probe10(proc_addr_port1_dbg),
+//                 .probe11(Store_Data_dbg),
+//                 .probe12(proc_data_port1_int_dbg),
+//                 .probe13(Double_Load_Store__Stall));
+// `endif     
 //ila_0 debugger( .clk(CLK),
 //                .probe0(pc_cache),
 //                .probe1(Instruction__IF_ID),

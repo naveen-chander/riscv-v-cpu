@@ -10,10 +10,7 @@ interrupt
 //,out_t0,out_t1,out_t2,sp
 `ifdef itlb_def
 ,vpn_to_ppn_req
-`endif  
-`ifdef ila_debug
-,debug_clk
-`endif  
+`endif   
 );
 
 input rst;
@@ -42,9 +39,6 @@ input cache_en;
 output vpn_to_ppn_req;
 `endif 
 
-`ifdef ila_debug
-input debug_clk;
-`endif  
 
 output tick_en;
 //output [31:0] sp;
@@ -108,9 +102,6 @@ IF_ID_EX Pipeline( .CLK(clk),
                    `ifdef itlb_def
                    ,.vpn_to_ppn_req(vpn_to_ppn_req)
                    `endif  
-                    `ifdef ila_debug
-                    ,.debug_clk(debug_clk)
-                    `endif  
                    );
 
 

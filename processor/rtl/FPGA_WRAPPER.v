@@ -1,62 +1,69 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: DESE, IISc
+// Engineer: V Naveen Chander
 // 
 // Create Date: 30.12.2015 11:19:02
 // Design Name: 
 // Module Name: FPGA_WRAPPER
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
+// Project Name: riscv_v_cpu
+// Target Devices: xc7vx485tffg1761-2 {VC707 Board}
+// Tool Versions: Vivado 2020.2 (2020.3 doesnt not support this device)
+// Description: RISCV Vector Processor Adds Vector Unit in the RISC-V Pipeline
+//      
 // Dependencies: 
 // 
-// Revision:
+// Revision: Modified on 26-05-2021 : RISC-V Vector Processor
 // Revision 0.01 - File Created
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `include "defines.v"
 
-module FPGA_WRAPPER(rst_in,clk_in1_n,clk_in1_p,led,int_in, ALU_monitor,
-`ifdef UART_IMPL_PER
-,srx_pad_i,stx_pad_o
-,rts_pad_o,cts_pad_i
-//,rts_pad_o,cts_pad_i,dtr_pad_o,dsr_pad_i,ri_pad_i,dcd_pad_i
-`endif
-`ifdef SW_LED_IMPL
-,sw1_i,sw2_i,sw3_i,led1_o,led2_o,led3_o
-`endif
-`ifdef TEST
-,clk_int
-,instr_int,blck_instr_int
-`endif
-`ifdef Demo_En
- ,vn_in
- ,vp_in
- ,pwm_o
- ,buzzer_o
- ,temp_set_in
- ,temp_set_en
- ,lcd_en_o
- ,lcd_rs_o
- ,lcd_rw_o
- ,lcd_data_o 
-`endif
-//,out_t0,out_t1,out_t2
+module FPGA_WRAPPER(
+    rst_in,
+    clk_in1_n,
+    clk_in1_p,
+    int_in,
+    ALU_monitor,
+    `ifdef UART_IMPL_PER        //Defined
+    srx_pad_i,stx_pad_o
+    ,rts_pad_o,cts_pad_i
+    `endif
+    `ifdef SW_LED_IMPL          //Not Defined by Default
+    ,sw1_i,sw2_i,sw3_i,led1_o,led2_o,led3_o
+    `endif
+    `ifdef TEST     //Not Defined by Default
+    ,clk_int
+    ,instr_int,blck_instr_int
+    `endif
+    `ifdef Demo_En  // Not Defined by Default
+     ,led
+    ,vn_in
+    ,vp_in
+    ,pwm_o
+    ,buzzer_o
+    ,temp_set_in
+    ,temp_set_en
+    ,lcd_en_o
+    ,lcd_rs_o
+    ,lcd_rw_o
+    ,lcd_data_o 
+    `endif
 );
+
+// Top Module I/O Definitions
+input rst_in;
+input clk_in1_n;
+input clk_in1_p;
+input [2:0] int_in;
+output ALU_monitor;
 
 `ifdef UART_IMPL_PER
 input 								 srx_pad_i;
 output 								 stx_pad_o;
 output 								 rts_pad_o;
 input 								 cts_pad_i;
-//output 								 dtr_pad_o;
-//input 								 dsr_pad_i;
-//input 								 ri_pad_i;
-//input 								 dcd_pad_i;
 `endif
 
 `ifdef SW_LED_IMPL
@@ -68,19 +75,18 @@ output led2_o;
 output led3_o;
 `endif
 
-input rst_in;
-input clk_in1_n;
-input clk_in1_p;
+
 `ifdef TEST
 output clk_int;
 output [31:0] instr_int;
 output [31:0] blck_instr_int;
 `endif
 
-input [2:0] int_in;
-output [7:0] led;
-output ALU_monitor;
+
+
+
 `ifdef Demo_En
+output [7:0] led;
  input vn_in;
  input vp_in;
  input [7:0] temp_set_in;
@@ -103,7 +109,6 @@ wire [31:0] led_w;
 
 wire clk_int;
 wire clk_x2;
-wire clk_x3;
 
 wire  rts_pad_o;
 wire  cts_pad_i;
@@ -202,27 +207,11 @@ end
     // Clock out ports
     .clk_out1(clk_int),     // output clk_out1
     .clk_out2(clk_x2),     // output clk_out2
-    .clk_out3(clk_x3),     // output clk_out3
     // Status and control signals
     .reset(reset), // input reset
    // Clock in ports
     .clk_in1_p(clk_in1_p),    // input clk_in1_p
     .clk_in1_n(clk_in1_n));    // input clk_in1_n
-
-
-
-
-
-
-//clk_wiz_0 clk_core
-//(
-//// Clock in ports
-//.clk_in1_p(clk_in1_p),    // input clk_in1_p
-//.clk_in1_n(clk_in1_n),    // input clk_in1_n
-//// Clock out ports
-//.clk_out1(clk_int),    // output clk_out1
-//.clk_out3(clk_x3),    // output clk_out3
-//.clk_out2(clk_x2));    // output clk_out2
 
 
 `ifdef secded
@@ -294,9 +283,6 @@ cpu cpu1(.clk(clk_int),.clk_x2(clk_x2),.rst(rst),.led(lcd_reg),
     `ifdef itlb_def
     ,.vpn_to_ppn_req(vpn_to_ppn_req)
     `endif     
-    `ifdef ila_debug
-    ,.debug_clk(clk_x3)
-    `endif  
     );     
 
 `ifdef Demo_En 
@@ -334,11 +320,11 @@ PWM pwm1(
   
 
  `endif
- vio_0 VIO (
-  .clk(clk_int),                // input wire clk
-  .probe_in0(ALU_monitor),    // input wire [0 : 0] probe_in0
-  .probe_in1(stx_pad_o),    // input wire [0 : 0] probe_in1
-  .probe_in2(srx_pad_i),    // input wire [0 : 0] probe_in2
-  .probe_out0(rst_VIO)  // output wire [0 : 0] probe_out0
-);   
+//  vio_0 VIO (
+//   .clk(clk_int),                // input wire clk
+//   .probe_in0(ALU_monitor),    // input wire [0 : 0] probe_in0
+//   .probe_in1(stx_pad_o),    // input wire [0 : 0] probe_in1
+//   .probe_in2(srx_pad_i),    // input wire [0 : 0] probe_in2
+//   .probe_out0(rst_VIO)  // output wire [0 : 0] probe_out0
+// );   
 endmodule

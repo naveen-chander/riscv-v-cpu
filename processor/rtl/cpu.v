@@ -11,9 +11,6 @@ module cpu(clk,clk_x2,rst,led,
 `ifdef itlb_def
 ,vpn_to_ppn_req
 `endif  
-`ifdef ila_debug
-,debug_clk
-`endif  
 ,cache_flush,cache_en,tick_en,addr_exception
 ,interrupt
 //,out_t0,out_t1,out_t2,sp
@@ -49,9 +46,6 @@ input cache_en;
 output vpn_to_ppn_req;
 `endif 
 
-`ifdef ila_debug
-input debug_clk;
-`endif  
 
 `ifdef TEST
 output [31:0] block_instr_int;
@@ -110,9 +104,6 @@ fet_dec_ex_mem fdem( .rst(rst),.clk(clk),.clk_x2(clk_x2),.led(led),.tick_en(tick
                      ,. ALU_monitor(ALU_monitor)   // Brought out just to avoid vector unit optimization
                     `ifdef itlb_def
                     ,.vpn_to_ppn_req(vpn_to_ppn_req)
-                    `endif  
-                    `ifdef ila_debug
-                    ,.debug_clk(debug_clk)
                     `endif  
                     );
 
