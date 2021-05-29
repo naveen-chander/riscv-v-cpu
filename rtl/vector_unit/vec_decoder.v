@@ -174,8 +174,9 @@ always @(*) begin
 	if (reset|decoder_disable) 	
 		S_VECn				<= 1;	//Scalar Instruction by default
 	else
-		S_VECn <=  ( (opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE)  || ((opcode == `OP_VEC_ARITH) && funct3 !=`funct3__VCSR) )? 1'b0 : 1'b1;
+		S_VECn <=  ( (((opcode == `OP_VEC_LOAD) || (opcode == `OP_VEC_STORE)) &&(funct3 != 3'b0)) || ((opcode == `OP_VEC_ARITH) && funct3 !=`funct3__VCSR) )? 1'b0 : 1'b1;
 end
+// Note that Opcodes for Vector load/Store is same as Scalar Floatoing Point. However, for Scalar FP, funct3 is "000".
 always @(*) begin
 	if (reset|S_VECn) begin	
 		decode__vs1         <= 0;

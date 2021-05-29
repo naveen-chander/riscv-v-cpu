@@ -27,7 +27,9 @@ use ieee.numeric_std.all;
 library xil_defaultlib;
 use xil_defaultlib.mypack.all;
 
+  
 entity exe_unit is
+	generic(VMEM_ADDR_WIDTH : integer :=14);
     Port  ( 
 	    clk 		: in  STD_LOGIC;
         reset 		: in  STD_LOGIC;	-- Asynchronous RESET
@@ -182,7 +184,7 @@ signal DMEM_WE_VEC_CPU  	: done_array;
 signal DMEM_WE_CPU  		: done_array;
 signal REG_DATA_WR_VEC_CPU 	: op_array;
 signal VREG_WE_VEC_CPU		: done_array;
-signal DMEM_ADDR_CPU    	: std_logic_vector(11 downto 0);
+signal DMEM_ADDR_CPU    	: std_logic_vector(VMEM_ADDR_WIDTH-1 downto 0);
 -- XRF Interface Related
 signal end_cycle_XRF_Addr : std_logic_vector(8 downto 0);
 signal end_cycle_XRF_DataWR : std_logic_vector(8 downto 0);
@@ -392,7 +394,7 @@ GEN_LSUs:
 
 ------------------------------------------------------	
 	-- DMEM Interface XBAR
-	DMEM_INF: dmem_xbar generic map(12) 
+	DMEM_INF: dmem_xbar generic map(DMEM_ADDR_WIDTH=>VMEM_ADDR_WIDTH) 
 	port map(
 		WR_ADDR 		=> EXE_MEM_LSU_y,
 		RD_ADDR 		=> MEM_WB_LSU_y ,
@@ -614,7 +616,8 @@ end process XRF_ADDR_DATA_gen;
 
 -----------------------------------------------------	
 -- CPU INterface
-VECTOR_CPU_INF: cpu_inf port map(
+VECTOR_CPU_INF: cpu_inf generic map(DMEM_ADDR_WIDTH=>VMEM_ADDR_WIDTH) 
+		   port map(
 		   clk			 => clk			 ,
 		   reset		 => reset		 ,
 		   ADDR_IN       => PROC_ADDR	 ,

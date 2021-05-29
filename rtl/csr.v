@@ -46,6 +46,7 @@ module csr
     input [4:0] FPU_flags,
     output [2:0] frm,
     
+    input vect_cxt_changed,
     input [31:0] pc_id_ex,
 	output[8:0] vector_length,
 	output [1:0] vcsr_quant
@@ -110,6 +111,10 @@ always @(posedge clk) begin
     end  */   
     else if( csr_wr_en && (csr_adr_wr == `mstatus))
         csr_mstatus <= csr_wrdata;  
+    // This Addition is Specific to Vector Extension
+    // Vector Context Switch bits VS[1:0] denote whether Vector COntext Change is required OR not. REefer to CSR spec for XS[1:0]
+    else if (vect_cxt_changed && |csr_mstatus[10:9])
+        csr_mstatus[10:9] <= 2'b11;
 end
 
 
@@ -185,7 +190,7 @@ end
 // Vector Length CSR Register
 always @(posedge clk) begin
     if(rst) 
-        vl = 8;	//Default vector Length = 8
+        vl = `vl_default;	//Default vector Length = 8
     else if(csr_wr_en && (csr_adr_wr == `vec_len_csr_addr) ) begin
 		if (csr_wrdata !=0)
 			vl <= csr_wrdata;
@@ -200,14 +205,14 @@ assign vector_length = vl;
 // Vector Length CSR Register
 always @(posedge clk) begin
     if(rst) 
-        vq = 2'b11;	//Default Quantization Q8.24
+        vq = `vxrm_default;	//Default Quantization Q8.24
     else if(csr_wr_en && (csr_adr_wr == `vxrm_csr_addr) ) begin
 			vq <= csr_wrdata;
 	end
 		
 end
 ////////////////////////////////////////////////////////////////
-assign vcsr_quant = vq;
+assign vcsr_quant = vq[1:0];
 ////////////////////////////////////////////////////////////////
 always @(posedge clk) begin
     if(rst) begin
@@ -222,7 +227,8 @@ always @(posedge clk) begin
             csr_rddata = csr_mepc_shadow;
         end
         else if(csr_adr_rd == `mstatus) begin
-            csr_rddata = csr_mstatus;
+            csr_rddata = {(csr_mstatus[10] & csr_mstatus[9]), csr_mstatus[30:0]}; // csr_mstatus[10:9] denotes SD bit 
+                                                                  //to determine if CXT save is required or not
         end
         else if(csr_adr_rd == `mtvec) begin
             csr_rddata = csr_mtvec;
@@ -258,9 +264,9 @@ always @(posedge clk) begin
             csr_rddata = 32'b0;                                             //  to mention these registers ar enot implemented
         end
 		else if(csr_adr_rd == `vec_len_csr_addr) 
-			csr_rddata = vl;		// Read Vector Length
+			csr_rddata = {23'b0,vl};		// Read Vector Length
 		else if(csr_adr_rd == `vxrm_csr_addr) 
-			csr_rddata = vcsr_quant;		// Read Vector Length
+			csr_rddata = {30'b0, vcsr_quant};		// Read Quantization
         else begin
             csr_rddata = 32'b0;
         end    

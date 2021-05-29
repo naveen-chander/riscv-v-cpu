@@ -340,6 +340,7 @@ wire irq_ctrl_dec_src2;
 wire IF_ID_Freeze__irq;
 wire [8:0] vector_length;
 wire [1:0] vcsr_quant;
+wire vect_cxt_changed;
 reg  freeze_vector_ops;			// vector unit will freeze with assertion
 wire [31:0] vector_mem_data;
 
@@ -968,9 +969,10 @@ vector_top VECTOR_UNIT(
 			.rs2_sel                (vector_unit_rs2_sel    ),
 			.rs1_sel                (vector_unit_rs1_sel    ),
 			.ALU_monitor            (ALU_monitor            ),
+			.vect_cxt_changed       (vect_cxt_changed       ),
             .vec_wr_XRF             (vec_wr_XRF             ),
             .XRF_ADDR               (XRF_ADDR_VEC_UNIT      ),
-            .XRF_DATAWR             (XRF_DATAWR_VEC_UNIT      ),
+            .XRF_DATAWR             (XRF_DATAWR_VEC_UNIT    ),
             .XRF_WE                 (XRF_WE_VEC_UNIT        )
 
 		);

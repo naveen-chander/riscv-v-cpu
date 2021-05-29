@@ -30,6 +30,7 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 package mypack is
 
+  constant VMEM_ADDR_WIDTH : INTEGER := 14;-- Change this when DMEM ADDR WIDTH Changes ... over and above generic map
 type i_rec is record
 	start   : std_logic;                          -- Begin Vector Operations
 	vs1     : std_logic_vector(4 downto 0);       -- Vector Source Register 1
@@ -102,12 +103,13 @@ constant i_rec_init : i_rec :=
 type count_array is array(0 to 7) of std_logic_vector(5 downto 0);
 type done_array is array(0 to 7) of std_logic;
 type op_array is array(0 to 7) of std_logic_vector(31 downto 0);
-type dmem_addr_array is array(0 to 7) of std_logic_vector(11 downto 0);
+type dmem_addr_array is array(0 to 7) of std_logic_vector(VMEM_ADDR_WIDTH-1 downto 0);
 type reg_array is array (31 downto 0) of std_logic_vector(31 downto 0);
 --------------------------------------------------------------------
 ---  COmponent Definitions ---------------------
 --------------------------------------------------------------------
 component cpu_inf is
+  generic(DMEM_ADDR_WIDTH : integer :=14);
   Port ( 
          clk          : in STD_LOGIC;
          reset        : in STD_LOGIC;
@@ -117,7 +119,7 @@ component cpu_inf is
          WE_IN        : in STD_LOGIC;
          vs1          : out STD_LOGIC_VECTOR (4 downto 0);
          vd           : out STD_LOGIC_VECTOR (4 downto 0);
-         mem_addr     : out STD_LOGIC_VECTOR (11 downto 0);
+         mem_addr     : out STD_LOGIC_VECTOR (DMEM_ADDR_WIDTH-1 downto 0);
          DMEM_WE      : out done_array;
          VREG_WE      : out done_array;
          dout         : out STD_LOGIC_VECTOR (31 downto 0)
@@ -235,7 +237,7 @@ COMPONENT DMEM_0
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -245,7 +247,7 @@ COMPONENT DMEM_1
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -256,7 +258,7 @@ COMPONENT DMEM_2
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -266,7 +268,7 @@ COMPONENT DMEM_3
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -276,7 +278,7 @@ COMPONENT DMEM_4
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -286,7 +288,7 @@ COMPONENT DMEM_5
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -296,7 +298,7 @@ COMPONENT DMEM_6
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
@@ -306,7 +308,7 @@ COMPONENT DMEM_7
   PORT (
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(VMEM_ADDR_WIDTH-1  DOWNTO 0);
     dina : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );

@@ -54,41 +54,70 @@
 
 
 module wb_mux
-   (input                      wb_clk_i,
-    input 		       wb_rst_i,
 
-    // Master Interface
-    input [aw-1:0] 	       wbm_adr_i,
-    input [dw-1:0] 	       wbm_dat_i,
-    input [3:0] 	       wbm_sel_i,
-    input 		       wbm_we_i,
-    input 		       wbm_cyc_i,
-    input 		       wbm_stb_i,
-    input [2:0] 	       wbm_cti_i,
-    input [1:0] 	       wbm_bte_i,
-    output [dw-1:0] 	       wbm_dat_o,
-    output 		       wbm_ack_o,
-    output 		       wbm_err_o,
-    output 		       wbm_rty_o, 
-    // Wishbone Slave interface
-    output [num_slaves*aw-1:0] wbs_adr_o,
-    output [num_slaves*dw-1:0] wbs_dat_o,
-    output [num_slaves*4-1:0]  wbs_sel_o, 
-    output [num_slaves-1:0]    wbs_we_o,
-    output [num_slaves-1:0]    wbs_cyc_o,
-    output [num_slaves-1:0]    wbs_stb_o,
-    output [num_slaves*3-1:0]  wbs_cti_o,
-    output [num_slaves*2-1:0]  wbs_bte_o,
-    input  [num_slaves*dw-1:0]  wbs_dat_i,
-    input  [num_slaves-1:0]     wbs_ack_i,
-    input  [num_slaves-1:0]     wbs_err_i,
-    input  [num_slaves-1:0]     wbs_rty_i);
+   (wb_clk_i,wb_rst_i,
+    wbm_adr_i,
+wbm_dat_i,
+wbm_sel_i,
+wbm_we_i,
+wbm_cyc_i,
+wbm_stb_i,
+wbm_cti_i,
+wbm_bte_i,
+wbm_dat_o,
+wbm_ack_o,
+wbm_err_o,
+wbm_rty_o, 
 
+wbs_adr_o,
+wbs_dat_o,
+wbs_sel_o, 
+wbs_we_o,
+wbs_cyc_o,
+wbs_stb_o,
+wbs_cti_o,
+wbs_bte_o,
+ wbs_dat_i,
+ wbs_ack_i,
+ wbs_err_i,
+ wbs_rty_i);
+   
     parameter dw = 32;        // Data width
     parameter aw = 32;        // Address width
     parameter num_slaves = 4; // Number of slaves
     parameter [aw*num_slaves-1:0] MATCH_ADDR = {32'h5f100700, 32'h5f100800, 32'h5f000600, 32'h00000000};
     parameter [aw*num_slaves-1:0] MATCH_MASK = {num_slaves{32'hff000000}};
+
+   input                      wb_clk_i;
+    input 		       wb_rst_i;
+
+    // Master Interface
+    input [aw-1:0] 	       wbm_adr_i;
+    input [dw-1:0] 	       wbm_dat_i;
+    input [3:0] 	       wbm_sel_i;
+    input 		           wbm_we_i;
+    input 		           wbm_cyc_i;
+    input 		           wbm_stb_i;
+    input [2:0] 	       wbm_cti_i;
+    input [1:0] 	       wbm_bte_i;
+    output [dw-1:0] 	   wbm_dat_o;
+    output 		           wbm_ack_o;
+    output 		           wbm_err_o;
+    output 		           wbm_rty_o; 
+    // Wishbone Slave interface
+    output [num_slaves*aw-1:0] wbs_adr_o;
+    output [num_slaves*dw-1:0] wbs_dat_o;
+    output [num_slaves*4-1:0]  wbs_sel_o; 
+    output [num_slaves-1:0]    wbs_we_o;
+    output [num_slaves-1:0]    wbs_cyc_o;
+    output [num_slaves-1:0]    wbs_stb_o;
+    output [num_slaves*3-1:0]  wbs_cti_o;
+    output [num_slaves*2-1:0]  wbs_bte_o;
+    input  [num_slaves*dw-1:0]  wbs_dat_i;
+    input  [num_slaves-1:0]     wbs_ack_i;
+    input  [num_slaves-1:0]     wbs_err_i;
+    input  [num_slaves-1:0]     wbs_rty_i;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Master/slave connection

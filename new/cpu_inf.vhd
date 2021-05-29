@@ -1,20 +1,20 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
+-- Company: DESE, IISc
+-- Engineer: V Naveen Chander
 -- 
 -- Create Date: 28.04.2021 10:49:14
 -- Design Name: 
 -- Module Name: cpu_inf - Behavioral
--- Project Name: 
+-- Project Name: risc_v_cpu
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description: Vector Memory and Register Interface with CPU
 -- 
 -- Dependencies: 
 -- 
 -- Revision:
 -- Revision 0.01 - File Created
--- Additional Comments:
+-- Additional Comments: Changed Memory Map on 28th may 2021
 -- 
 ----------------------------------------------------------------------------------
 
@@ -34,29 +34,20 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 ------------------------------------------------------------------
 -- Memory Map
--- DMEM
--- 0x0004_0000 - 0x0004_3FFF    : DMEM_Bank0
--- 0x0004_4000 - 0x0004_7FFF    : DMEM_Bank1
--- 0x0004_8000 - 0x0004_BFFF    : DMEM_Bank2
--- 0x0004_C000 - 0x0004_FFFF    : DMEM_Bank3
--- 0x0005_0000 - 0x0005_3FFF    : DMEM_Bank4
--- 0x0005_4000 - 0x0005_7FFF    : DMEM_Bank5
--- 0x0005_8000 - 0x0005_BFFF    : DMEM_Bank6
--- 0x0005_C000 - 0x0005_FFFF    : DMEM_Bank7
------------------------------------------------
--- VREG
--- 0x0008_0000 - 0x0008_007F    : VREG_Bank0
--- 0x0008_0000 - 0x0008_00FF    : VREG_Bank1
--- 0x0008_0000 - 0x0008_017F    : VREG_Bank2
--- 0x0008_0000 - 0x0008_01FF    : VREG_Bank3
--- 0x0008_0000 - 0x0008_027F    : VREG_Bank4
--- 0x0008_0000 - 0x0008_02FF    : VREG_Bank5
--- 0x0008_0000 - 0x0008_037F    : VREG_Bank6
--- 0x0008_0000 - 0x0008_03FF    : VREG_Bank7
--------------------------------------------------
+-- Changed : May 28 2021: To Increase the size of Scratchpad Memory from 128 kB to 512 kB
+-- -----------------|------------------|---------------|------------|
+-- Memory           | Start            | End           | Size       |
+-- -----------------|------------------|---------------|------------|
+-- Main mem         | 0x0              | 0x00FF_FFFF   | 2 MB       |
+-- Scratchpad mem   | 0x0100_0000      | 0x0107_FFFF   | 512 kB     |
+-- Vector Registers | 0x1800_0000      | 0x0108_03FF   | 1 kB       |
+-- -----------------|------------------|---------------|------------|
+
+-- Vector Scratchpad Memory and Vector Registers are interleaved across 8 Banks
 
 
 entity cpu_inf is
+    generic(DMEM_ADDR_WIDTH : integer :=14);
     Port ( clk          : in STD_LOGIC;
            reset        : in STD_LOGIC;
            ADDR_IN      : in STD_LOGIC_VECTOR (31 downto 0);
@@ -65,7 +56,7 @@ entity cpu_inf is
            WE_IN        : in STD_LOGIC;
            vs1          : out STD_LOGIC_VECTOR (4 downto 0);
            vd           : out STD_LOGIC_VECTOR (4 downto 0);
-           mem_addr     : out STD_LOGIC_VECTOR (11 downto 0);
+           mem_addr     : out STD_LOGIC_VECTOR (DMEM_ADDR_WIDTH-1 downto 0);
            DMEM_WE      : out done_array;
            VREG_WE      : out done_array;
            dout         : out STD_LOGIC_VECTOR (31 downto 0));
@@ -84,25 +75,29 @@ signal vreg_dout        : std_logic_vector(31 downto 0);
 signal vreg_dout_reg    : std_logic_vector(31 downto 0);
 signal dmem_dout        : std_logic_vector(31 downto 0);
 
-constant DMEM_START     : unsigned(31 downto 0):= x"00040000";
-constant DMEM_END       : unsigned(31 downto 0):= x"0005FFFC";
-constant VREG_START     : unsigned(31 downto 0):= x"00080000";
-constant VREG_END       : unsigned(31 downto 0):= x"000803FC";
+constant DMEM_START     : unsigned(31 downto 0):= x"00100000";
+constant DMEM_END       : unsigned(31 downto 0):= x"0017FFFC";
+constant VREG_START     : unsigned(31 downto 0):= x"00180000";
+constant VREG_END       : unsigned(31 downto 0):= x"001803FC";
 
 begin
-reg_bank_sel    <= ADDR_IN(4 downto 2);
-mem_bank_sel    <= ADDR_IN(4 downto 2);
+
 
 dmem_cs <= '1' when ( (unsigned(ADDR_IN) >= DMEM_START) and (unsigned(ADDR_IN) <= DMEM_END) ) else
            '0';
 
 vreg_cs <= '1' when ( (unsigned(ADDR_IN) >= VREG_START) and (unsigned(ADDR_IN) <= VREG_END) ) else
            '0';
-
+-----------------------------------------
+reg_bank_sel    <= ADDR_IN(4 downto 2) when vreg_cs = '1' else 
+                   (others=>'1'); -- Default bank 7
+mem_bank_sel    <= ADDR_IN(4 downto 2) when dmem_cs = '1' else 
+                   (others=>'1'); -- Default Bank 7 
+-----------------------------------------
 ------------ To Regiser /Memory Signals
 vs1 <= ADDR_IN(9 downto 5);     -- 
 vd  <= ADDR_IN(9 downto 5);
-mem_addr <= ADDR_IN(16 downto 5);       -- Each 4 Bytes x 8 banks = 32 ; log(32)=5
+mem_addr <= ADDR_IN(DMEM_ADDR_WIDTH+4 downto 5);       -- Each 4 Bytes x 8 banks = 32 ; log(32)=5
 -------------------------------------------------------
 -- Dmem Write to all banks
 DMEM_WE_gen: process(ADDR_IN, WE_IN, dmem_cs, mem_bank_sel)

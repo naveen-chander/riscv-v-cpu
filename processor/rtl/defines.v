@@ -32,10 +32,10 @@
 `define vxrm_csr_addr 12'h00A   // FOr Vector Unit Quantization 00 =>Q32.0 ; 01=> Q24.8; 10=>Q16.16; 11=>Q8.24
 `define max_vector_length 9'd64 // allocated 9 bits to accomodate for vl =256 in future
 
-`define VEC_REG_START_ADDR 32'h0008_0000
-`define VEC_REG_END_ADDR 32'h0008_03FC
-`define VEC_MEM_START_ADDR 32'h0004_0000
-`define VEC_MEM_END_ADDR 32'h0005_FFFC
+`define VEC_REG_START_ADDR 32'h0018_0000
+`define VEC_REG_END_ADDR 32'h0018_03FC
+`define VEC_MEM_START_ADDR 32'h0010_0000
+`define VEC_MEM_END_ADDR 32'h0017_FFFC
 //--------------------------------
 `define op32_fp_loadop 7'b0000111
 `define op32_fp_storeop 7'b0100111
@@ -323,8 +323,12 @@
 `define mie_mask 32'hFFFFF888
 
 `define misa      12'h301
-`define misa_default 32'h40001101   // this will change as features will increase in processor
-`define misa_mask 32'h40001101   // this will change as features will increase in processor
+`define misa_default 32'h40201120  // Vector Extension Present : AMO Removed {28th May , 2021}: Old Val :40001101
+`define misa_mask 32'h40201120     // this will change as features will increase in processor
+
+// Vector CSR Defaults
+`define vl_default 9'h8
+`define vxrm_default 2'h3
 
 `define mvendorid      12'hf11
 `define marchid      12'hf12
@@ -347,6 +351,7 @@
 `define ffcsr_mask   32'h000000FF
 `define fflags_mask  32'h0000001F
 `define frm_mask     32'h000000E0
+
 
 // ------ NON standard registers  ------  //
 `define mtimecmp    12'h7c0

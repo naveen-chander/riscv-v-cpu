@@ -56,6 +56,7 @@ module vector_top(
     output reg [4:0]  	rs2_sel,
     output reg [4:0]  	rs1_sel,
 	output wire			ALU_monitor,
+	output reg         vect_cxt_changed,
 	//XRF INterface
 	output  wire    vec_wr_XRF,
 	output [4:0]	XRF_ADDR		,
@@ -597,30 +598,24 @@ begin
 		end
 end
 
-///////////////////////////////////Processor interface /////////////////////////
-// Functions - 
-// 1. Processor Reads VREG
-// 1. Processor Reads VMEM
-// 1. Processor Writes VREG
-// 1. Processor Writes VMEM
-// Memory Map
-// VREG : 0x0008_0000 - 0008_0FFC
-// VREG : 0x0004_0000 - 0005_0FFC
-/*
+///////////////////////////////////Logic to Save Vector Context Switches///////////////////////////
+// This logic generates a signal that changes the XS[1:0] bits in mstatus register to dirty {2'b11}
+// Vector Context Change bit {vect_cxt_changed} get set when any vector instruction modifies 
+// Vector Registers v0-v31 . 
+// For this to happen successfully, 
+//	1. reg_we of any instruction in the cony shoule be 1'b1.
+//	2. Start should be 1'b1
+
 always @(*) begin
-	if (reset | v_busy) begin
-		proc_addr 	<= 0;
-		proc_din  	<= 0;
-		proc_we   	<= 0;
-		proc_dout	<= 0;
+	vect_cxt_changed <= (start[0] && reg_we[0]) || 
+	                    (start[1] && reg_we[1]) || 
+	                    (start[2] && reg_we[2]) || 
+	                    (start[3] && reg_we[3]) || 
+	                    (start[4] && reg_we[4]) || 
+	                    (start[5] && reg_we[5]) || 
+	                    (start[6] && reg_we[6]) || 
+	                    (start[7] && reg_we[7]) ;
 	end
-	else begin
-		proc_addr 	<= proc_addr;
-		proc_din  	<= proc_din;
-		proc_we   	<= proc_we;
-		proc_dout	<= proc_dout;
-	end
-end
-*/
+
 endmodule
 

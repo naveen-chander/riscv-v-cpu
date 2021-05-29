@@ -71,6 +71,7 @@ end wrapper;
 
 architecture Behavioral of wrapper is
 component exe_unit is
+	generic(VMEM_ADDR_WIDTH : integer :=14);
     Port  ( 
 	    clk 		: in  STD_LOGIC;
         reset 		: in  STD_LOGIC;	-- Asynchronous RESET
@@ -96,7 +97,8 @@ end component;
 
 begin
 
-VECTOR_EXE_UNIT_PIPE: exe_unit port map(
+VECTOR_EXE_UNIT_PIPE: exe_unit generic map(VMEM_ADDR_WIDTH=>14)
+	port map(
 	clk 					=> clk 				,		
 	reset 		    		=> reset 			,	
 	vl			    		=> vl				,	
